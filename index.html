@@ -71,7 +71,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px;}
     <span style="display:flex;align-items:center;gap:3px;"><span style="width:13px;height:13px;background:#991b1b;border-radius:3px;display:inline-block;"></span>30%미만</span>
     <span style="display:flex;align-items:center;gap:3px;"><span style="width:13px;height:13px;background:#e5e7eb;border:1px solid #d1d5db;border-radius:3px;display:inline-block;"></span>사례없음</span>
   </div>
-  <div style="width:100%;"><div id="hm" style="display:inline-block;width:100%;"></div></div>
+  <div style="overflow-x:auto;"><div id="hm" style="display:inline-block;"></div></div>
   <div id="panel">
     <div id="pt" style="font-size:14px;font-weight:700;margin-bottom:12px;"></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
@@ -258,13 +258,12 @@ const GS=[5,10,20,30,40,50,60,70,80,90,95];
 function gc(r){if(r===null)return null;if(r>=60)return{bg:'#166534',tc:'#fff'};if(r>=50)return{bg:'#1d4ed8',tc:'#fff'};if(r>=40)return{bg:'#4d7c0f',tc:'#fff'};if(r>=30)return{bg:'#92400e',tc:'#fff'};return{bg:'#991b1b',tc:'#fff'};}
 function buildHM(){
   const w=document.getElementById('hm');
-  const container=w.closest('.container')||document.body;
-  const aw=Math.min(container.offsetWidth-32, window.innerWidth-48, 900);
-  const cs=Math.floor((aw-52)/11);
+  const aw=Math.min(window.innerWidth-32,920);
+  const cs=Math.max(Math.floor((aw-48)/11),34);
   const fs=cs>=50?12:cs>=42?11:10;
   let h=`<div style="display:flex;padding-left:${cs+4}px;margin-bottom:2px;">`;
   GS.forEach(g=>{h+=`<div style="width:${cs}px;text-align:center;font-size:9px;color:#6b7280;flex-shrink:0;">${g}%</div>`;});
-  h+=`</div><div style="font-size:11px;font-weight:600;color:#374151;text-align:center;padding-left:${cs+4}px;width:${cs*11+cs+4}px;margin-bottom:4px;">← 생기부경쟁력 (낮을수록 우수) →</div>`;
+  h+=`</div><div style="font-size:9px;color:#9ca3af;text-align:center;padding-left:${cs+4}px;width:${cs*11+cs+4}px;margin-bottom:3px;">← 생기부경쟁력 (낮을수록 우수) →</div>`;
   NS.forEach(n=>{
     h+=`<div style="display:flex;align-items:center;margin-bottom:2px;"><div style="width:${cs+4}px;font-size:9px;color:#6b7280;text-align:right;padding-right:4px;flex-shrink:0;">${n}%</div>`;
     GS.forEach(g=>{
