@@ -292,7 +292,9 @@ function filterUnivList(q) {
 
 function selectUniv(univ) {
   curUniv = univ;
-  document.getElementById('univ-search').value = univ;
+  const si = document.getElementById('univ-search');
+  si.value = '';
+  si.placeholder = '현재: ' + univ + ' (다른 대학 검색하려면 입력)';
   document.getElementById('univ-dropdown').style.display = 'none';
   const d = UDATA[univ];
   const rate = d.total > 0 ? Math.round(d.pass/d.total*100) : 0;
@@ -322,7 +324,9 @@ function selectUniv(univ) {
 
 function clearUnivFilter() {
   curUniv = null;
-  document.getElementById('univ-search').value = '';
+  const si2 = document.getElementById('univ-search');
+  si2.value = '';
+  si2.placeholder = '대학명 검색 (예: 아주, 서울대, 경기대)...';
   document.getElementById('univ-dropdown').style.display = 'none';
   document.getElementById('univ-selected').style.display = 'none';
   buildHM();
