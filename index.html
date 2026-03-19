@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>바이브온 AI 분석 - 합격률 히트맵</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #f8fafc; color: #111; min-height: 100vh; }
+
+header { background: #1d4ed8; color: #fff; padding: 18px 24px; }
+header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+header p { font-size: 12px; opacity: 0.8; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
+
+.info-box { background: #dbeafe; border-left: 3px solid #2563eb; border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 13px; color: #1e3a8a; line-height: 1.7; margin-bottom: 16px; }
+
+.legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; font-size: 12px; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+.section-title { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 8px; }
+
+.hm-wrap { overflow-x: auto; margin-bottom: 24px; }
+.hm-inner { display: inline-block; }
+
+.hm-cell {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 4px; cursor: pointer; flex-shrink: 0;
+  transition: transform 0.12s, box-shadow 0.12s;
+  vertical-align: top;
+}
+.hm-cell:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2; position: relative; }
+.hm-cell.sel { outline: 3px solid #fbbf24; z-index: 3; }
+.hm-cell.empty { cursor: default; background: #e5e7eb !important; }
+.hm-cell.empty:hover { transform: none; box-shadow: none; }
+
+.axis-label { font-size: 10px; color: #6b7280; text-align: center; }
+.axis-title { font-size: 10px; color: #9ca3af; text-align: center; margin: 3px 0; }
+
+/* 선택 패널 */
+#panel { display: none; border: 2px solid #ccc; border-radius: 12px; padding: 16px; margin-top: 8px; background: #fff; }
+#panel-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.stat-card { border-radius: 8px; padding: 10px; text-align: center; }
+.stat-label { font-size: 11px; margin-bottom: 3px; }
+.stat-val { font-size: 20px; font-weight: 700; }
+.list-title { font-size: 12px; font-weight: 700; color: #6b7280; margin-bottom: 8px; }
+.stud-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0f0f0; }
+.stud-row:last-child { border-bottom: none; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.stud-info { flex: 1; line-height: 1.5; }
+.stud-univ { font-size: 13px; font-weight: 600; color: #111; }
+.stud-dept { font-size: 11px; color: #6b7280; }
+
+/* 안내 섹션 */
+.guide { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-top: 20px; }
+.guide h2 { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #1d4ed8; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.guide-item { background: #f8fafc; border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.6; }
+.guide-item strong { display: block; font-size: 13px; margin-bottom: 3px; }
+
+footer { text-align: center; font-size: 11px; color: #9ca3af; padding: 20px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>바이브온 AI 분석 — 종합전형 합격률 히트맵</h1>
+  <p>인문계 일반고 · 수시 학생부종합전형 · 1개년 실측 데이터 (280건)</p>
+</header>
+
+<div class="container">
+
+  <div class="info-box" style="margin-top:16px;">
+    <strong>사용법</strong> — 학생의 <strong>내신경쟁력(%)</strong>과 <strong>생기부경쟁력(%)</strong>을 찾아 셀을 클릭하면 해당 구간의 실제 지원 대학·학과·합불 명단이 표시됩니다.
+    두 지표 모두 <strong>낮을수록 우수</strong>합니다 (상위 %). 숫자는 <strong>합격수 / 전체</strong>입니다.
+  </div>
+
+  <div class="legend">
+    <span style="font-size:12px;color:#6b7280;">합격률:</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#166534;"></span>60%+</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#1d4ed8;"></span>50~59%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#4d7c0f;"></span>40~49%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#92400e;"></span>30~39%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#991b1b;"></span>30% 미만</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#e5e7eb;border:1px solid #d1d5db;"></span>사례없음</span>
+  </div>
+
+  <div class="section-title">실측 데이터 기반 합격률 히트맵 (클릭 시 학생 명단)</div>
+  <div class="hm-wrap"><div class="hm-inner" id="hm"></div></div>
+
+  <div id="panel">
+    <div id="panel-title"></div>
+    <div class="stat-grid">
+      <div class="stat-card" style="background:#f3f4f6;">
+        <div class="stat-label" style="color:#6b7280;">지원 건수</div>
+        <div class="stat-val" id="s-total"></div>
+      </div>
+      <div class="stat-card" style="background:#dbeafe;">
+        <div class="stat-label" style="color:#1d4ed8;">합격</div>
+        <div class="stat-val" style="color:#1d4ed8;" id="s-pass"></div>
+      </div>
+      <div class="stat-card" style="background:#fee2e2;">
+        <div class="stat-label" style="color:#b91c1c;">불합격</div>
+        <div class="stat-val" style="color:#b91c1c;" id="s-fail"></div>
+      </div>
+    </div>
+    <div class="list-title">지원 학생 명단</div>
+    <div id="s-list"></div>
+  </div>
+
+  <div class="guide">
+    <h2>교사 활용 가이드 — 구간별 권고 기준</h2>
+    <div class="guide-grid">
+      <div class="guide-item" style="border-left:3px solid #166534;">
+        <strong style="color:#166534;">적극 권장 (60%+)</strong>
+        내신·생기부 모두 40% 이하 구간. AI 예측과 실측이 잘 일치하므로 신뢰 가능.
+      </div>
+      <div class="guide-item" style="border-left:3px solid #1d4ed8;">
+        <strong style="color:#1d4ed8;">권장 (50~59%)</strong>
+        합격 가능성 충분. 대학별 평가 요소 추가 확인 후 지원 권장.
+      </div>
+      <div class="guide-item" style="border-left:3px solid #4d7c0f;">
+        <strong style="color:#4d7c0f;">신중 검토 (40~49%)</strong>
+        지원 가능하나 보완 필요. 자소서·생기부 강점 부각 필수.
+      </div>
+      <div class="guide-item" style="border-left:3px solid #92400e;">
+        <strong style="color:#92400e;">소신 지원 (30~39%)</strong>
+        합격 가능성 낮음. 목표 대학 재검토 또는 병행 전략 권장.
+      </div>
+      <div class="guide-item" style="border-left:3px solid #991b1b;">
+        <strong style="color:#991b1b;">지원 지양 (30% 미만)</strong>
+        합격 가능성 매우 낮음. 현실적인 지원 목표 재설정 필요.
+      </div>
+    </div>
+    <div style="margin-top:12px; font-size:11px; color:#9ca3af; line-height:1.6;">
+      ※ 본 자료는 1개년·1개교 실측 데이터(280건) 기반이며, 로지스틱 회귀 모델 정확도 76.4% 수준입니다. 최종 진학 지도는 담임·진학 교사의 전문적 판단과 병행하시기 바랍니다.
+    </div>
+  </div>
+
+</div>
+
+<footer>바이브온 AI 분석 프로그램 신뢰도 검증 · 인문계 일반고 2024학년도 수시 종합전형</footer>
+
+<script>
+const DATA = {"5_5":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"삼육대학교(서울)","dept":"건축학과(5년제)"}]},"5_10":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"사학과"},{"result":"불","univ":"충북대학교(청주)","dept":"건축학과"}]},"5_20":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"5_30":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"영어영문학과"},{"result":"합","univ":"호서대학교(천안)","dept":"경영학과"}]},"5_40":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"한국교원대학교(청주)","dept":"지구과학교육과"}]},"5_50":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"5_60":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"울산과학기술원","dept":"이공계열"}]},"5_70":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"성균관대학교(수원)","dept":"전자전기공학부"}]},"5_80":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"5_90":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"5_95":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"단국대학교(천안)","dept":"경영공학과"}]},"10_5":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"휴먼서비스학부"}]},"10_10":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"명지대학교(용인)","dept":"정보통신공학전공"}]},"10_20":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"10_30":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"울산과학기술원","dept":"이공계열"}]},"10_40":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"10_50":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"명지대학교(용인)","dept":"환경시스템공학전공"},{"result":"합","univ":"호서대학교(아산)","dept":"컴퓨터공학과"}]},"10_60":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"성균관대학교(수원)","dept":"공학계열"}]},"10_70":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"인천대학교(인천)","dept":"도시공학과"},{"result":"불","univ":"경기대학교(수원)","dept":"기계시스템공학과"}]},"10_80":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"10_90":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"10_95":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"포항공과대학교(포항)","dept":"단일계열"},{"result":"합","univ":"부산가톨릭대학교(부산)","dept":"간호학과"}]},"20_5":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"인하대학교(인천)","dept":"의류디자인학과"},{"result":"합","univ":"광운대학교(서울)","dept":"미디어커뮤니케이션학부"}]},"20_10":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"가톨릭대학교(성심)","dept":"정보통신전자공학부"}]},"20_20":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"명지대학교(용인)","dept":"건축학부 건축학전공"},{"result":"합","univ":"단국대학교(죽전)","dept":"고분자시스템공학부"}]},"20_30":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"서울대학교(서울)","dept":"소비자아동학부"}]},"20_40":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"울산과학기술원","dept":"이공계열"},{"result":"합","univ":"백석대학교(천안)","dept":"경상학부"}]},"20_50":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"아주대학교(수원)","dept":"영어영문학과"},{"result":"합","univ":"한국공학대학교(시흥)","dept":"반도체공학부"}]},"20_60":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"기계시스템공학과"}]},"20_70":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"20_80":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"바이오융합학부"}]},"20_90":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"인하대학교(인천)","dept":"사회인프라공학과"}]},"20_95":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"불","univ":"서울대학교(서울)","dept":"언어학과"},{"result":"합","univ":"한국외국어대학교(용인)","dept":"Finance&AI융합학부"}]},"30_5":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"30_10":{"total":4,"pass":2,"fail":2,"rate":50,"students":[{"result":"불","univ":"숙명여자대학교(서울)","dept":"미디어학부"},{"result":"합","univ":"숙명여자대학교(서울)","dept":"의류학과"},{"result":"불","univ":"광운대학교(서울)","dept":"화학과"},{"result":"합","univ":"명지대학교(용인)","dept":"정보통신공학전공"}]},"30_20":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"국어국문학과"}]},"30_30":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"AI컴퓨터공학부"}]},"30_40":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"아주대학교(수원)","dept":"화학공학과"},{"result":"불","univ":"백석대학교(천안)","dept":"간호학과"}]},"30_50":{"total":4,"pass":3,"fail":1,"rate":75,"students":[{"result":"합","univ":"대구경북과학기술원","dept":"기초학부"},{"result":"불","univ":"한양대학교(서울)","dept":"융합전자공학부"},{"result":"합","univ":"강남대학교(용인)","dept":"글로벌문화콘텐츠대학"},{"result":"합","univ":"순천향대학교(아산)","dept":"정보통신공학과"}]},"30_60":{"total":3,"pass":3,"fail":0,"rate":100,"students":[{"result":"합","univ":"인하대학교(인천)","dept":"간호학과"},{"result":"합","univ":"아주대학교(수원)","dept":"프런티어과학학부"},{"result":"합","univ":"국립공주대학교(공주)","dept":"영어교육과"}]},"30_70":{"total":5,"pass":3,"fail":2,"rate":60,"students":[{"result":"합","univ":"아주대학교(수원)","dept":"화학공학과"},{"result":"합","univ":"서울여자대학교(서울)","dept":"원예생명조경학과"},{"result":"불","univ":"가톨릭대학교(성심)","dept":"에너지환경공학과"},{"result":"합","univ":"한양대학교(서울)","dept":"화학공학과"},{"result":"불","univ":"호서대학교(아산)","dept":"기계공학과"}]},"30_80":{"total":3,"pass":1,"fail":2,"rate":33,"students":[{"result":"불","univ":"국민대학교(서울)","dept":"스포츠건강재활학과"},{"result":"불","univ":"홍익대학교(서울)","dept":"도시공학과"},{"result":"합","univ":"단국대학교(천안)","dept":"아시아중동학부 중국학전공"}]},"30_90":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"인하대학교(인천)","dept":"스포츠과학과"},{"result":"불","univ":"단국대학교(죽전)","dept":"인프라건설공학과"}]},"30_95":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"40_5":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"명지대학교(서울)","dept":"청소년지도학전공"},{"result":"합","univ":"단국대학교(죽전)","dept":"상담학과"}]},"40_10":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"아주대학교(수원)","dept":"사학과"}]},"40_20":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"불","univ":"서울과학기술대학교(서울)","dept":"정밀화학과"},{"result":"합","univ":"강남대학교(용인)","dept":"복지융합대학"}]},"40_30":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"불","univ":"한양대학교(ERICA)","dept":"LIONS자율전공학부"},{"result":"합","univ":"강남대학교(용인)","dept":"복지융합대학"}]},"40_40":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"충남대학교(대전)","dept":"경제학과"},{"result":"합","univ":"경인교육대학교(인천)","dept":"초등교육과"}]},"40_50":{"total":4,"pass":1,"fail":3,"rate":25,"students":[{"result":"불","univ":"이화여자대학교(서울)","dept":"화학·나노과학과"},{"result":"불","univ":"숭실대학교(서울)","dept":"화학공학과"},{"result":"불","univ":"숭실대학교(서울)","dept":"신소재공학과"},{"result":"합","univ":"홍익대학교(서울)","dept":"산업데이터공학과"}]},"40_60":{"total":4,"pass":0,"fail":4,"rate":0,"students":[{"result":"불","univ":"명지대학교(용인)","dept":"기계시스템공학부"},{"result":"불","univ":"중앙대학교(다빈치)","dept":"생명자원공학부(동물생명)"},{"result":"불","univ":"중앙대학교(다빈치)","dept":"생명자원공학부(식물생명)"},{"result":"불","univ":"백석대학교(천안)","dept":"사회복지학부"}]},"40_70":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"명지대학교(용인)","dept":"신소재공학전공"},{"result":"불","univ":"호서대학교(아산)","dept":"건축토목공학부"}]},"40_80":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"경기대학교(수원)","dept":"스마트시티공학부"},{"result":"불","univ":"한국공학대학교(시흥)","dept":"자유전공학부"}]},"40_90":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"성균관대학교(수원)","dept":"공학계열"}]},"40_95":{"total":3,"pass":1,"fail":2,"rate":33,"students":[{"result":"불","univ":"한국과학기술원","dept":"전학부"},{"result":"합","univ":"원광대학교(익산)","dept":"간호학과"},{"result":"불","univ":"강원대학교(춘천)","dept":"산림환경보호학과"}]},"50_5":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"50_10":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"서울대학교(서울)","dept":"경영대학"},{"result":"불","univ":"경북대학교(대구)","dept":"화학과"}]},"50_20":{"total":2,"pass":2,"fail":0,"rate":100,"students":[{"result":"합","univ":"서울시립대학교(서울)","dept":"경영학부"},{"result":"합","univ":"이화여자대학교(서울)","dept":"의류산업학과"}]},"50_30":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"명지대학교(용인)","dept":"공간디자인학과"}]},"50_40":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"50_50":{"total":4,"pass":1,"fail":3,"rate":25,"students":[{"result":"불","univ":"인하대학교(인천)","dept":"신소재공학과"},{"result":"합","univ":"성신여자대학교(서울)","dept":"윤리교육과"},{"result":"불","univ":"아주대학교(수원)","dept":"첨단바이오융합대학"},{"result":"불","univ":"단국대학교(죽전)","dept":"정치외교학과"}]},"50_60":{"total":4,"pass":2,"fail":2,"rate":50,"students":[{"result":"합","univ":"아주대학교(수원)","dept":"경제정치사회융합학부"},{"result":"불","univ":"중앙대학교(서울)","dept":"약학부"},{"result":"합","univ":"이화여자대학교(서울)","dept":"초등교육과"},{"result":"불","univ":"광운대학교(서울)","dept":"화학과"}]},"50_70":{"total":3,"pass":2,"fail":1,"rate":67,"students":[{"result":"합","univ":"서울교육대학교(서울)","dept":"초등교육학과"},{"result":"불","univ":"동국대학교(서울)","dept":"통계학과"},{"result":"합","univ":"을지대학교(성남)","dept":"자연계열학부"}]},"50_80":{"total":5,"pass":0,"fail":5,"rate":0,"students":[{"result":"불","univ":"인천대학교(인천)","dept":"동북아국제통상전공"},{"result":"불","univ":"경기대학교(수원)","dept":"화학과"},{"result":"불","univ":"한양대학교(ERICA)","dept":"LIONS자율전공(전계열)"},{"result":"불","univ":"한양대학교(ERICA)","dept":"약학과"},{"result":"불","univ":"한양대학교(ERICA)","dept":"LIONS자율전공(인문사회)"}]},"50_90":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"한양대학교(ERICA)","dept":"LIONS자율전공(인문사회)"},{"result":"불","univ":"한양대학교(ERICA)","dept":"글로벌문화통상학부"}]},"50_95":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"60_5":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"60_10":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"숙명여자대학교(서울)","dept":"미디어학부"}]},"60_20":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"불","univ":"세종대학교(서울)","dept":"미디어커뮤니케이션학과"},{"result":"합","univ":"단국대학교(죽전)","dept":"사학과"}]},"60_30":{"total":4,"pass":1,"fail":3,"rate":25,"students":[{"result":"합","univ":"아주대학교(수원)","dept":"금융공학과"},{"result":"불","univ":"경기대학교(수원)","dept":"바이오융합학부"},{"result":"불","univ":"상명대학교(서울)","dept":"경영학부"},{"result":"불","univ":"단국대학교(천안)","dept":"사회복지학과"}]},"60_40":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"60_50":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"인천대학교(인천)","dept":"윤리교육과"}]},"60_60":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"을지대학교(성남)","dept":"간호학과"},{"result":"불","univ":"상명대학교(천안)","dept":"스마트정보통신공학과"}]},"60_70":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"불","univ":"경기대학교(수원)","dept":"국어국문학과"},{"result":"합","univ":"울산과학기술원","dept":"이공계열"}]},"60_80":{"total":5,"pass":0,"fail":5,"rate":0,"students":[{"result":"불","univ":"아주대학교(수원)","dept":"행정학과"},{"result":"불","univ":"한성대학교(서울)","dept":"미래융합사회과학대학"},{"result":"불","univ":"충북대학교(청주)","dept":"수학과"},{"result":"불","univ":"상명대학교(천안)","dept":"정보보안공학과"},{"result":"불","univ":"백석대학교(천안)","dept":"사회복지학부"}]},"60_90":{"total":4,"pass":3,"fail":1,"rate":75,"students":[{"result":"합","univ":"광주과학기술원","dept":"기초교육학부"},{"result":"불","univ":"경기대학교(수원)","dept":"신소재화학공학부"},{"result":"합","univ":"가천대학교(성남)","dept":"스마트시티학과"},{"result":"합","univ":"국립한국교통대학교(충주)","dept":"건축공학과"}]},"60_95":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"한양대학교(서울)","dept":"생명공학과"}]},"70_5":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"성신여자대학교(서울)","dept":"심리학과"}]},"70_10":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"70_20":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"동국대학교(서울)","dept":"미디어커뮤니케이션학전공"}]},"70_30":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"70_40":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"인하대학교(인천)","dept":"한국어문학과"}]},"70_50":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"삼육대학교(서울)","dept":"간호학과"},{"result":"불","univ":"호서대학교(천안)","dept":"사회복지학부"}]},"70_60":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"아주대학교(수원)","dept":"프런티어과학학부"},{"result":"불","univ":"충북대학교(청주)","dept":"중어중문학과"}]},"70_70":{"total":6,"pass":3,"fail":3,"rate":50,"students":[{"result":"합","univ":"한국항공대학교(고양)","dept":"항공운항학과"},{"result":"불","univ":"아주대학교(수원)","dept":"간호학과"},{"result":"합","univ":"동덕여자대학교(서울)","dept":"국어국문학전공"},{"result":"합","univ":"인천대학교(인천)","dept":"중어중국학과"},{"result":"불","univ":"세종대학교(서울)","dept":"국어국문학과"},{"result":"불","univ":"호서대학교(천안)","dept":"사회복지학부"}]},"70_80":{"total":3,"pass":1,"fail":2,"rate":33,"students":[{"result":"불","univ":"경기대학교(수원)","dept":"바이오융합학부"},{"result":"합","univ":"경기대학교(수원)","dept":"글로벌어문학부"},{"result":"불","univ":"건국대학교(글로컬)","dept":"영어문화학과"}]},"70_90":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"단국대학교(죽전)","dept":"행정학과"}]},"70_95":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"강원대학교(도계)","dept":"물리치료학과"},{"result":"불","univ":"충북대학교(청주)","dept":"산림학과"}]},"80_5":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"80_10":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"80_20":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"이화여자대학교(서울)","dept":"커뮤니케이션·미디어학부"},{"result":"불","univ":"인하대학교(인천)","dept":"사학과"}]},"80_30":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"합","univ":"인하대학교(인천)","dept":"생명공학과"},{"result":"불","univ":"숭실대학교(서울)","dept":"건축학부"}]},"80_40":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"고려대학교(서울)","dept":"전기전자공학부"},{"result":"불","univ":"홍익대학교(세종)","dept":"광고홍보학부"}]},"80_50":{"total":3,"pass":1,"fail":2,"rate":33,"students":[{"result":"합","univ":"건국대학교(서울)","dept":"응용통계학과"},{"result":"불","univ":"가톨릭대학교(성심)","dept":"일어일본문화학과"},{"result":"불","univ":"국립공주대학교(공주)","dept":"의료정보학과"}]},"80_60":{"total":4,"pass":0,"fail":4,"rate":0,"students":[{"result":"불","univ":"인하대학교(인천)","dept":"생명과학과"},{"result":"불","univ":"숭실대학교(서울)","dept":"정치외교학과"},{"result":"불","univ":"아주대학교(수원)","dept":"경영학과"},{"result":"불","univ":"아주대학교(수원)","dept":"국어국문학과"}]},"80_70":{"total":5,"pass":0,"fail":5,"rate":0,"students":[{"result":"불","univ":"가천대학교(메디컬)","dept":"간호학과"},{"result":"불","univ":"아주대학교(수원)","dept":"프런티어과학학부"},{"result":"불","univ":"경기대학교(수원)","dept":"경영학부"},{"result":"불","univ":"경기대학교(수원)","dept":"AI컴퓨터공학부"},{"result":"불","univ":"고려대학교(서울)","dept":"화학과"}]},"80_80":{"total":6,"pass":1,"fail":5,"rate":17,"students":[{"result":"불","univ":"가톨릭대학교(성의)","dept":"간호학과"},{"result":"불","univ":"서울과학기술대학교","dept":"화공생명공학과"},{"result":"불","univ":"명지대학교(용인)","dept":"화학나노학전공"},{"result":"합","univ":"대구경북과학기술원","dept":"기초학부"},{"result":"불","univ":"고려대학교(세종)","dept":"전자및정보공학과"},{"result":"불","univ":"가톨릭대학교(성심)","dept":"바이오메디컬화학공학과"}]},"80_90":{"total":6,"pass":2,"fail":4,"rate":33,"students":[{"result":"불","univ":"중앙대학교(서울)","dept":"간호학과"},{"result":"불","univ":"서울여자대학교(서울)","dept":"메타버스융합콘텐츠전공"},{"result":"불","univ":"경기대학교(수원)","dept":"경제학부"},{"result":"불","univ":"호서대학교(아산)","dept":"동물보건복지학과"},{"result":"합","univ":"한경국립대학교(안성)","dept":"식물자원조경학부"},{"result":"합","univ":"백석대학교(천안)","dept":"첨단IT학부"}]},"80_95":{"total":9,"pass":2,"fail":7,"rate":22,"students":[{"result":"불","univ":"한국항공대학교(고양)","dept":"공과대학"},{"result":"불","univ":"가천대학교(성남)","dept":"AI인문대학"},{"result":"합","univ":"나사렛대학교(천안)","dept":"응급구조학과"},{"result":"불","univ":"성균관대학교(수원)","dept":"공학계열"},{"result":"합","univ":"명지대학교(서울)","dept":"디지털콘텐츠디자인학과"},{"result":"불","univ":"한양대학교(ERICA)","dept":"기계공학과"},{"result":"불","univ":"국립공주대학교(천안)","dept":"기계자동차공학부"},{"result":"불","univ":"호서대학교(아산)","dept":"동물보건복지학과"},{"result":"불","univ":"선문대학교(아산)","dept":"응급구조학과"}]},"90_5":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"90_10":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"가톨릭대학교(성심)","dept":"심리학과"}]},"90_20":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"90_30":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"경희대학교(서울)","dept":"의상학과"}]},"90_40":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"숭실대학교(서울)","dept":"화학과"},{"result":"불","univ":"성공회대학교(서울)","dept":"미디어콘텐츠융합학부"}]},"90_50":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"강원대학교(춘천)","dept":"경영·회계학부"}]},"90_60":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"가천대학교(성남)","dept":"경영학과"}]},"90_70":{"total":1,"pass":1,"fail":0,"rate":100,"students":[{"result":"합","univ":"경기대학교(수원)","dept":"경영학부"}]},"90_80":{"total":3,"pass":0,"fail":3,"rate":0,"students":[{"result":"불","univ":"경희대학교(서울)","dept":"간호학과"},{"result":"불","univ":"아주대학교(수원)","dept":"응용화학과"},{"result":"불","univ":"경기대학교(수원)","dept":"수학과"}]},"90_90":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"고려대학교(서울)","dept":"교육학과"}]},"90_95":{"total":8,"pass":0,"fail":8,"rate":0,"students":[{"result":"불","univ":"건국대학교(서울)","dept":"KU자유전공학부"},{"result":"불","univ":"아주대학교(수원)","dept":"기계공학과"},{"result":"불","univ":"나사렛대학교(천안)","dept":"물리치료학과"},{"result":"불","univ":"가톨릭대학교(성심)","dept":"경영학과"},{"result":"불","univ":"춘천교육대학교","dept":"초등교육학과"},{"result":"불","univ":"국립한국교통대학교(의왕)","dept":"철도인프라공학과"},{"result":"불","univ":"상명대학교(천안)","dept":"글로벌금융경영학부"},{"result":"불","univ":"한성대학교(서울)","dept":"뷰티디자인매니지먼트학과"}]},"95_5":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"95_10":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"아주대학교(수원)","dept":"심리학과"}]},"95_20":{"total":1,"pass":0,"fail":1,"rate":0,"students":[{"result":"불","univ":"숭실대학교(서울)","dept":"언론홍보학과"}]},"95_30":{"total":2,"pass":0,"fail":2,"rate":0,"students":[{"result":"불","univ":"한국외국어대학교(서울)","dept":"미디어커뮤니케이션학부"},{"result":"불","univ":"순천향대학교(아산)","dept":"한국문화콘텐츠학과"}]},"95_40":{"total":3,"pass":2,"fail":1,"rate":67,"students":[{"result":"합","univ":"단국대학교(죽전)","dept":"경제학과"},{"result":"합","univ":"성신여자대학교(서울)","dept":"경영학과"},{"result":"불","univ":"가톨릭대학교(성심)","dept":"생명공학과"}]},"95_50":{"total":0,"pass":0,"fail":0,"rate":null,"students":[]},"95_60":{"total":2,"pass":1,"fail":1,"rate":50,"students":[{"result":"불","univ":"숭실대학교(서울)","dept":"화학과"},{"result":"합","univ":"나사렛대학교(천안)","dept":"경찰행정학부"}]},"95_70":{"total":10,"pass":2,"fail":8,"rate":20,"students":[{"result":"불","univ":"경희대학교(국제)","dept":"융합바이오·신소재공학과"},{"result":"불","univ":"한국교원대학교(청주)","dept":"윤리교육과"},{"result":"불","univ":"성신여자대학교(서울)","dept":"간호학과"},{"result":"불","univ":"세종대학교(서울)","dept":"생명시스템학부"},{"result":"불","univ":"숭실대학교(서울)","dept":"의생명시스템학부"},{"result":"불","univ":"명지대학교(서울)","dept":"청소년지도학전공"},{"result":"불","univ":"서울여자대학교(서울)","dept":"사회복지학과"},{"result":"합","univ":"한국기술교육대학교(천안)","dept":"디자인공학과"},{"result":"불","univ":"성균관대학교(서울)","dept":"의상학과"},{"result":"합","univ":"전주대학교(전주)","dept":"스마트미디어학과"}]},"95_80":{"total":10,"pass":1,"fail":9,"rate":10,"students":[{"result":"합","univ":"서울시립대학교(서울)","dept":"통계학과"},{"result":"불","univ":"아주대학교(수원)","dept":"프런티어과학학부"},{"result":"불","univ":"건국대학교(서울)","dept":"화학과"},{"result":"불","univ":"덕성여자대학교(서울)","dept":"글로벌융합대학(유아교육과)"},{"result":"불","univ":"경기대학교(수원)","dept":"경영학부"},{"result":"불","univ":"한국외국어대학교(용인)","dept":"Global Business & Technology학부"},{"result":"불","univ":"경기대학교(수원)","dept":"디자인비즈학부"},{"result":"불","univ":"나사렛대학교(천안)","dept":"간호학과"},{"result":"불","univ":"백석대학교(천안)","dept":"간호학과"}]},"95_90":{"total":9,"pass":1,"fail":8,"rate":11,"students":[{"result":"불","univ":"건국대학교(서울)","dept":"KU자유전공학부"},{"result":"불","univ":"동국대학교(서울)","dept":"정치외교학전공"},{"result":"불","univ":"숭실대학교(서울)","dept":"화학과"},{"result":"불","univ":"단국대학교(죽전)","dept":"기계공학과"},{"result":"불","univ":"인천대학교(인천)","dept":"유아교육과"},{"result":"불","univ":"가천대학교(성남)","dept":"AI인문대학"},{"result":"불","univ":"경기대학교(수원)","dept":"경제학부"},{"result":"합","univ":"연세대학교(미래)","dept":"소프트웨어학부"},{"result":"불","univ":"가톨릭대학교(성심)","dept":"영어영문학부"}]},"95_95":{"total":36,"pass":4,"fail":32,"rate":11,"students":[{"result":"불","univ":"을지대학교(의정부)","dept":"간호학과"},{"result":"불","univ":"광운대학교(서울)","dept":"화학공학과"},{"result":"불","univ":"국민대학교(서울)","dept":"영어영문학부"},{"result":"불","univ":"성신여자대학교(서울)","dept":"유아교육과"},{"result":"불","univ":"인천대학교(인천)","dept":"경제학과"},{"result":"합","univ":"동덕여자대학교(서울)","dept":"경영융합학부"},{"result":"불","univ":"경기대학교(수원)","dept":"경영학부"},{"result":"불","univ":"인천대학교(인천)","dept":"수학과"},{"result":"불","univ":"인하대학교(인천)","dept":"체육교육과"},{"result":"불","univ":"충남대학교(대전)","dept":"중어중문학과"},{"result":"불","univ":"가천대학교(성남)","dept":"스마트보안학과"},{"result":"불","univ":"나사렛대학교(천안)","dept":"응급구조학과"},{"result":"합","univ":"한림대학교(춘천)","dept":"소프트웨어·AI계열"},{"result":"불","univ":"가천대학교(성남)","dept":"사회복지학과"},{"result":"불","univ":"한양대학교(서울)","dept":"한양인터칼리지학부"},{"result":"불","univ":"한성대학교(서울)","dept":"크리에이티브인문학부"},{"result":"불","univ":"상명대학교(서울)","dept":"경영학부"},{"result":"불","univ":"한양대학교(ERICA)","dept":"교통물류공학과"},{"result":"합","univ":"대구가톨릭대학교(경산)","dept":"물리치료학과"},{"result":"불","univ":"한양대학교(ERICA)","dept":"디자인계열"},{"result":"불","univ":"상명대학교(서울)","dept":"글로벌경영학과"},{"result":"불","univ":"호서대학교(아산)","dept":"동물보건복지학과"},{"result":"합","univ":"고려대학교(세종)","dept":"국제스포츠학부"},{"result":"불","univ":"한양대학교(ERICA)","dept":"스포츠과학부"},{"result":"불","univ":"서울여자대학교(서울)","dept":"아동학과"},{"result":"불","univ":"강남대학교(용인)","dept":"법행정세무학부"},{"result":"불","univ":"단국대학교(죽전)","dept":"건축학부 건축학전공"},{"result":"불","univ":"상명대학교(천안)","dept":"글로벌지역학부"},{"result":"불","univ":"호서대학교(아산)","dept":"식품영양학과"},{"result":"불","univ":"호서대학교(아산)","dept":"게임소프트웨어학과"},{"result":"불","univ":"평택대학교(평택)","dept":"정보통신학과"}]}};
+
+const NS = [5,10,20,30,40,50,60,70,80,90,95];
+const GS = [5,10,20,30,40,50,60,70,80,90,95];
+
+function getColor(r) {
+  if (r === null) return null;
+  if (r >= 60) return { bg:'#166534', tc:'#fff' };
+  if (r >= 50) return { bg:'#1d4ed8', tc:'#fff' };
+  if (r >= 40) return { bg:'#4d7c0f', tc:'#fff' };
+  if (r >= 30) return { bg:'#92400e', tc:'#fff' };
+  return { bg:'#991b1b', tc:'#fff' };
+}
+
+function build() {
+  const wrap = document.getElementById('hm');
+  const aw = Math.min(window.innerWidth - 40, 900);
+  const cs = Math.max(Math.floor((aw - 48) / 11), 38);
+  const fs = cs >= 52 ? 12 : cs >= 44 ? 11 : 10;
+  let h = '';
+
+  h += `<div style="display:flex;padding-left:${cs+4}px;margin-bottom:2px;">`;
+  GS.forEach(g => { h += `<div class="axis-label" style="width:${cs}px;">${g}%</div>`; });
+  h += `</div>`;
+  h += `<div class="axis-title" style="padding-left:${cs+4}px;width:${cs*11+cs+4}px;">← 생기부경쟁력 (낮을수록 우수) →</div>`;
+
+  NS.forEach(n => {
+    h += `<div style="display:flex;align-items:center;margin-bottom:2px;">`;
+    h += `<div class="axis-label" style="width:${cs+4}px;text-align:right;padding-right:5px;">${n}%</div>`;
+    GS.forEach(g => {
+      const k = `${n}_${g}`;
+      const d = DATA[k];
+      if (!d || d.total === 0) {
+        h += `<div class="hm-cell empty" style="width:${cs}px;height:${cs-2}px;margin-right:2px;"><span style="font-size:9px;color:#9ca3af;">-</span></div>`;
+      } else {
+        const c = getColor(d.rate);
+        h += `<div class="hm-cell" id="c${n}_${g}" onclick="pick(${n},${g})" style="width:${cs}px;height:${cs-2}px;margin-right:2px;background:${c.bg};">
+          <span style="font-size:${fs}px;font-weight:700;color:${c.tc};line-height:1.2;">${d.pass}/${d.total}</span>
+          <span style="font-size:${Math.max(fs-1,9)}px;color:${c.tc};opacity:.9;line-height:1.2;">${d.rate}%</span>
+        </div>`;
+      }
+    });
+    h += `</div>`;
+  });
+  h += `<div class="axis-title" style="padding-left:${cs+4}px;margin-top:3px;">↑ 내신경쟁력 (낮을수록 우수) ↓</div>`;
+  wrap.innerHTML = h;
+}
+build();
+window.addEventListener('resize', build);
+
+let prev = null;
+function pick(n, g) {
+  if (prev) { const el = document.getElementById(`c${prev}`); if (el) el.style.outline = 'none'; }
+  prev = `${n}_${g}`;
+  const el = document.getElementById(`c${n}_${g}`);
+  if (el) el.style.outline = '3px solid #fbbf24';
+
+  const d = DATA[`${n}_${g}`];
+  const c = getColor(d.rate);
+  const panel = document.getElementById('panel');
+  panel.style.display = 'block';
+  panel.style.borderColor = c ? c.bg : '#ccc';
+  document.getElementById('panel-title').textContent = `내신경쟁력 ${n}% × 생기부경쟁력 ${g}% 구간 — 실제 합격률 ${d.rate}%`;
+  document.getElementById('s-total').textContent = d.total + '건';
+  document.getElementById('s-pass').textContent = d.pass + '건';
+  document.getElementById('s-fail').textContent = d.fail + '건';
+
+  const sorted = [...d.students].sort((a, b) => (a.result === '합' ? 0 : 1) - (b.result === '합' ? 0 : 1));
+  let sl = '';
+  sorted.forEach(s => {
+    const isP = s.result === '합';
+    sl += `<div class="stud-row">
+      <span class="badge" style="background:${isP?'#dbeafe':'#fee2e2'};color:${isP?'#1e40af':'#b91c1c'};">${s.result}</span>
+      <div class="stud-info">
+        <div class="stud-univ">${s.univ}</div>
+        <div class="stud-dept">${s.dept}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('s-list').innerHTML = sl;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+</body>
+</html>
