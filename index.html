@@ -344,30 +344,33 @@ function highlightUniv(univ) {
   buildHM();
   if (!univ || !UDATA[univ]) return;
   const recs = UDATA[univ].records;
-  // 셀별로 몇명이나 해당 대학인지 집계
   const cellMap = {};
   recs.forEach(r => {
     const k = r.n + '_' + r.g;
     if (!cellMap[k]) cellMap[k] = {pass:0, fail:0};
-    if (r.result === '합') cellMap[k].pass++;
+    if (['1단계합','일괄합'].includes(r.result)) cellMap[k].pass++;
     else cellMap[k].fail++;
   });
   Object.keys(cellMap).forEach(k => {
-    const el = document.getElementById('c' + k.replace('_','_'));
-    // id는 c{n}_{g} 형식
     const [n,g] = k.split('_');
     const cell = document.getElementById('c'+n+'_'+g);
     if (!cell) return;
     const cm = cellMap[k];
-    // 오버레이 텍스트 추가
-    cell.style.outline = '3px solid #fbbf24';
-    cell.style.position = 'relative';
-    // 셀 위에 대학 인원 표시 레이어
-    const badge = document.createElement('div');
-    badge.style.cssText = 'position:absolute;top:-8px;right:-6px;background:#fbbf24;color:#111;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;z-index:5;white-space:nowrap;';
-    badge.textContent = cm.pass+'합' + (cm.fail>0?'/'+cm.fail+'불':'');
-    cell.style.position = 'relative';
-    cell.appendChild(badge);
+    const passOnly = cm.fail === 0;
+    const failOnly = cm.pass === 0;
+    // 셀 전체를 금색 배경으로 교체 (더 잘 보임)
+    cell.style.background = '#f59e0b';
+    cell.style.outline = '3px solid #b45309';
+    // 기존 텍스트 제거 후 새로 표시
+    cell.innerHTML = '';
+    const top = document.createElement('span');
+    top.style.cssText = 'font-size:10px;font-weight:800;color:#111;line-height:1.2;';
+    top.textContent = (cm.pass > 0 ? cm.pass+'합' : '') + (cm.fail > 0 ? (cm.pass>0?'/':'') + cm.fail+'불' : '');
+    const bot = document.createElement('span');
+    bot.style.cssText = 'font-size:9px;color:#111;opacity:.8;line-height:1.2;';
+    bot.textContent = '★';
+    cell.appendChild(top);
+    cell.appendChild(bot);
   });
 }
 
