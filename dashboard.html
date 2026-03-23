@@ -475,7 +475,7 @@ body {
   </div>
 
   <!-- ══ 하단: 일정 | 수업 | 3학년부 ══ -->
-  <div class="bot-row">
+  <div class="bot-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
 
     <!-- 일정 -->
     <div class="card">
@@ -534,6 +534,15 @@ body {
         <button class="btn" onclick="addLink('adm')">추가</button>
       </div>
       <div class="link-list" id="adm-list"></div>
+    </div>
+
+    <!-- 메모 -->
+    <div class="card">
+      <div class="card-title">
+        <span class="card-title-left">📝&nbsp; 메모 <span class="badge badge-amber">자동저장</span></span>
+        <span class="memo-saved-lbl" id="memo-saved" style="font-size:11px;color:#9ca3af"></span>
+      </div>
+      <textarea id="memo-area" placeholder="자유롭게 메모하세요..." style="width:100%;min-height:140px;border:1px solid #e8eaed;border-radius:6px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;outline:none;background:#f9fafb;color:#111827;line-height:1.7;transition:border-color .15s"></textarea>
     </div>
 
   </div>
@@ -663,7 +672,7 @@ const PERIODS=[
   {n:7,t:'15:30'},
 ];
 
-let GS_URL  = localStorage.getItem('gs_url')||'https://script.google.com/macros/s/AKfycbxGs0E9J1cug0Vq2yMitLFRnT9z5kYw1-2F39FgopIWJBZXV7lBNVOlCF-0C4Z0u-4/exec';
+let GS_URL  = localStorage.getItem('gs_url')||'https://script.google.com/macros/s/AKfycbxm7HZ4Ij0b1uCb_BTETPySvUVbEN2NfJwSr0svLgy9N5nyQkEIW7KzNnRjwbnNCEKl/exec';
 let clsLinks=[], admLinks=[], events=[];
 let userTT  = [lload('user_tt0',{}), lload('user_tt1',{})];
 let ttTarget= null, calY, calM;
@@ -683,44 +692,39 @@ function setSync(s){
   document.getElementById('sync-pill').className='sync-pill '+s;
   document.getElementById('sync-txt').textContent={synced:'저장됨',syncing:'저장 중…',error:'연결 오류',local:'로컬 모드'}[s];
 }
-async function gsSet(k,v){
+function gsSet(k,v){
   if(!cloud())return; setSync('syncing');
-  try{await fetch(`${GS_URL}?action=set&key=${encodeURIComponent(k)}&value=${encodeURIComponent(v)}`,{method:'GET',mode:'cors',redirect:'follow'});setSync('synced');}
-  catch(err){setSync('error');console.error('gsSet error:',err);}
+  jsonp(GS_URL+'?action=set&key='+encodeURIComponent(k)+'&value='+encodeURIComponent(v), function(d){
+    if(d&&d.ok)setSync('synced'); else setSync('error');
+  });
 }
-async function loadCloud(){
-  if(!cloud())return; setSync('syncing');
-  try{
-    await new Promise((resolve,reject)=>{
-      const script=document.createElement('script');
-      window.__gsCallback=function(d){
-        delete window.__gsCallback;
-        document.head.removeChild(script);
-        if(!d.ok){reject(new Error('not ok'));return;}
-        if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
-        if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
-        if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
-        if(d.data.user_tt0){userTT[0]=JSON.parse(d.data.user_tt0);lsave('user_tt0',userTT[0]);}
-        if(d.data.user_tt1){userTT[1]=JSON.parse(d.data.user_tt1);lsave('user_tt1',userTT[1]);}
-        renderAll(); setSync('synced');
-        resolve();
-      };
-      script.onerror=()=>{delete window.__gsCallback;reject(new Error('script error'));};
-      script.src=`${GS_URL}?action=getAll&callback=__gsCallback`;
-      document.head.appendChild(script);
-    });
-  }catch(err){
-    // JSONP 실패시 일반 fetch 시도
-    try{
-      const r=await fetch(`${GS_URL}?action=getAll`,{mode:'no-cors'});
-      const txt=await r.text();
-      const d=JSON.parse(txt); if(!d.ok)throw 0;
-      if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
-      if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
-      if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
-      renderAll(); setSync('synced');
-    }catch(e){setSync('error');console.error('loadCloud error:',e);}
+function jsonp(url, cb){
+  const name='__cb'+Date.now();
+  const el=document.createElement('script');
+  const t=setTimeout(()=>{cleanup();cb(null);},12000);
+  function cleanup(){
+    delete window[name];
+    clearTimeout(t);
+    if(el.parentNode)el.parentNode.removeChild(el);
   }
+  window[name]=function(d){cleanup();cb(d);};
+  el.onerror=()=>{cleanup();cb(null);};
+  el.src=url+(url.includes('?')?'&':'?')+'callback='+name;
+  document.head.appendChild(el);
+}
+
+function loadCloud(){
+  if(!cloud())return; setSync('syncing');
+  jsonp(GS_URL+'?action=getAll', function(d){
+    if(!d||!d.ok){setSync('error');return;}
+    if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
+    if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
+    if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
+    if(d.data.user_tt0){userTT[0]=JSON.parse(d.data.user_tt0);lsave('user_tt0',userTT[0]);}
+    if(d.data.user_tt1){userTT[1]=JSON.parse(d.data.user_tt1);lsave('user_tt1',userTT[1]);}
+    if(d.data.memo){const v=d.data.memo;lsave('memo',v);if(memoArea)memoArea.value=v;}
+    renderAll(); setSync('synced');
+  });
 }
 function lsave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function lload(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
@@ -928,6 +932,24 @@ function saveLinks(type){
   else{lsave('adm_links',admLinks);gsSet('admLinks',JSON.stringify(admLinks));}
 }
 
+/* ── 메모 ── */
+let memoTimer;
+const memoArea = document.getElementById('memo-area');
+if(memoArea){
+  memoArea.addEventListener('focus', function(){ this.style.borderColor='#1d6bf3'; this.style.background='#fff'; });
+  memoArea.addEventListener('blur',  function(){ this.style.borderColor='#e8eaed'; this.style.background='#f9fafb'; });
+  memoArea.addEventListener('input', function(){
+    clearTimeout(memoTimer);
+    memoTimer = setTimeout(()=>{
+      const v = memoArea.value;
+      lsave('memo', v);
+      gsSet('memo', v);
+      const s = document.getElementById('memo-saved');
+      if(s){ s.textContent='저장됨'; setTimeout(()=>s.textContent='', 2000); }
+    }, 800);
+  });
+}
+
 /* ── 초기화 ── */
 function renderAll(){renderLinks('cls');renderLinks('adm');renderEvents();buildCal();buildTT(0);buildTT(1);}
 function init(){
@@ -938,6 +960,8 @@ function init(){
   userTT[0]=lload('user_tt0',{});
   userTT[1]=lload('user_tt1',{});
   document.getElementById('gs-url-input').value=GS_URL;
+  const savedMemo = lload('memo','');
+  if(memoArea && savedMemo) memoArea.value = savedMemo;
   renderAll();
   if(GS_URL)loadCloud(); else setSync('local');
   window.addEventListener('resize',syncTTHeight);
