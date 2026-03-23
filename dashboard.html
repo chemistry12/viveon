@@ -663,7 +663,7 @@ const PERIODS=[
   {n:7,t:'15:30'},
 ];
 
-let GS_URL  = localStorage.getItem('gs_url')||'https://script.google.com/macros/s/AKfycbzLU6vy1OOYTQl2BtJsSde00Ji3bp4DlZoPUdL2WS8n8lzoPl2HsD0pjhCsrzxRIv3I/exec';
+let GS_URL  = localStorage.getItem('gs_url')||'https://script.google.com/macros/s/AKfycbxGs0E9J1cug0Vq2yMitLFRnT9z5kYw1-2F39FgopIWJBZXV7lBNVOlCF-0C4Z0u-4/exec';
 let clsLinks=[], admLinks=[], events=[];
 let userTT  = [lload('user_tt0',{}), lload('user_tt1',{})];
 let ttTarget= null, calY, calM;
@@ -691,16 +691,36 @@ async function gsSet(k,v){
 async function loadCloud(){
   if(!cloud())return; setSync('syncing');
   try{
-    const r=await fetch(`${GS_URL}?action=getAll`,{method:'GET',mode:'cors',redirect:'follow'});
-    const txt=await r.text();
-    const d=JSON.parse(txt); if(!d.ok)throw 0;
-    if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
-    if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
-    if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
-    if(d.data.user_tt0){userTT[0]=JSON.parse(d.data.user_tt0);lsave('user_tt0',userTT[0]);}
-    if(d.data.user_tt1){userTT[1]=JSON.parse(d.data.user_tt1);lsave('user_tt1',userTT[1]);}
-    renderAll(); setSync('synced');
-  }catch(err){setSync('error');console.error('loadCloud error:',err);}
+    await new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      window.__gsCallback=function(d){
+        delete window.__gsCallback;
+        document.head.removeChild(script);
+        if(!d.ok){reject(new Error('not ok'));return;}
+        if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
+        if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
+        if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
+        if(d.data.user_tt0){userTT[0]=JSON.parse(d.data.user_tt0);lsave('user_tt0',userTT[0]);}
+        if(d.data.user_tt1){userTT[1]=JSON.parse(d.data.user_tt1);lsave('user_tt1',userTT[1]);}
+        renderAll(); setSync('synced');
+        resolve();
+      };
+      script.onerror=()=>{delete window.__gsCallback;reject(new Error('script error'));};
+      script.src=`${GS_URL}?action=getAll&callback=__gsCallback`;
+      document.head.appendChild(script);
+    });
+  }catch(err){
+    // JSONP 실패시 일반 fetch 시도
+    try{
+      const r=await fetch(`${GS_URL}?action=getAll`,{mode:'no-cors'});
+      const txt=await r.text();
+      const d=JSON.parse(txt); if(!d.ok)throw 0;
+      if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
+      if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
+      if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
+      renderAll(); setSync('synced');
+    }catch(e){setSync('error');console.error('loadCloud error:',e);}
+  }
 }
 function lsave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function lload(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
