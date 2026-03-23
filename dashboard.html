@@ -685,14 +685,15 @@ function setSync(s){
 }
 async function gsSet(k,v){
   if(!cloud())return; setSync('syncing');
-  try{await fetch(`${GS_URL}?action=set&key=${encodeURIComponent(k)}&value=${encodeURIComponent(v)}`,{redirect:'follow'});setSync('synced');}
+  try{await fetch(`${GS_URL}?action=set&key=${encodeURIComponent(k)}&value=${encodeURIComponent(v)}`,{method:'GET',mode:'cors',redirect:'follow'});setSync('synced');}
   catch(err){setSync('error');console.error('gsSet error:',err);}
 }
 async function loadCloud(){
   if(!cloud())return; setSync('syncing');
   try{
-    const r=await fetch(`${GS_URL}?action=getAll`,{redirect:'follow'});
-    const d=await r.json(); if(!d.ok)throw 0;
+    const r=await fetch(`${GS_URL}?action=getAll`,{method:'GET',mode:'cors',redirect:'follow'});
+    const txt=await r.text();
+    const d=JSON.parse(txt); if(!d.ok)throw 0;
     if(d.data.clsLinks){clsLinks=JSON.parse(d.data.clsLinks);lsave('cls_links',clsLinks);}
     if(d.data.admLinks){admLinks=JSON.parse(d.data.admLinks);lsave('adm_links',admLinks);}
     if(d.data.events)  {events  =JSON.parse(d.data.events);  lsave('events',events);}
