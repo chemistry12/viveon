@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>등급대별 수시 지원·합격 현황 분석</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+:root {
+  --bg:#f4f3ef; --sur:#ffffff; --sur2:#f0ede7; --bdr:#e2dcd4;
+  --tx:#1a1816; --mu:#7a746c; --mu2:#a09890;
+  --G:#c0392b; --GL:rgba(192,57,43,.12);
+  --J:#1a5fa0; --JL:rgba(26,95,160,.12);
+  --K:#2d7d46; --KL:rgba(45,125,70,.12);   /* 비교학교 */
+  --KJ:#5aaa72; --KJL:rgba(90,170,114,.12);
+  --ok:#1a7a40; --okL:#eaf6ef;
+  --wa:#b87a00; --waL:#fef8e7;
+  --rd:#c0392b; --rdL:#fdf0ee;
+  --sh:0 1px 4px rgba(0,0,0,.08);
+  --sh2:0 4px 16px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:'Noto Sans KR',sans-serif;font-size:14px;min-height:100vh;}
+
+/* ── HEADER ─────────────────────────────────── */
+.hdr{background:var(--tx);color:#fff;padding:24px 40px 20px;}
+.hdr-row{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.hdr h1{font-size:20px;font-weight:700;letter-spacing:-.5px;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 9px;border-radius:3px;border:1px solid;}
+.badge-y{background:rgba(255,200,0,.15);border-color:rgba(255,200,0,.3);color:#ffd060;}
+.badge-v{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#ccc;}
+.hdr p{font-size:12px;color:#999;font-weight:300;}
+
+/* ── TABS ────────────────────────────────────── */
+.tabs{background:var(--sur);border-bottom:2px solid var(--bdr);display:flex;padding:0 40px;overflow-x:auto;}
+.tab{padding:14px 22px;font-size:13px;font-weight:500;color:var(--mu);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap;transition:.2s;letter-spacing:-.2px;font-family:'Noto Sans KR',sans-serif;}
+.tab:hover{color:var(--tx);}
+.tab.on{color:var(--G);border-bottom-color:var(--G);font-weight:700;}
+.tn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--sur2);border-radius:50%;font-size:10px;margin-right:7px;font-family:'IBM Plex Mono',monospace;}
+.tab.on .tn{background:var(--G);color:#fff;}
+
+/* ── LAYOUT ─────────────────────────────────── */
+.main{padding:28px 40px 80px;}
+.panel{display:none;}.panel.on{display:block;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.mt{margin-top:16px;}
+.mt2{margin-top:24px;}
+
+/* ── CARDS ───────────────────────────────────── */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:20px;box-shadow:var(--sh);}
+.card h3{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;}
+.card-title{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px;}
+.card-sub{font-size:11px;color:var(--mu);line-height:1.6;margin-bottom:14px;}
+
+/* ── KPI ─────────────────────────────────────── */
+.kpi{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:16px 18px;box-shadow:var(--sh);}
+.kpi .kl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);font-family:'IBM Plex Mono',monospace;margin-bottom:6px;}
+.kpi .kv{font-size:26px;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-bottom:3px;}
+.kpi .kd{font-size:11px;color:var(--mu);line-height:1.5;}
+.cr{color:var(--G);}.cb{color:var(--J);}.ck{color:var(--K);}.cg{color:var(--ok);}
+
+/* ── BAND SELECTOR ───────────────────────────── */
+.band-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.band-btn{padding:8px 15px;border-radius:20px;border:1.5px solid var(--bdr);background:var(--sur);color:var(--mu);font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.18s;}
+.band-btn:hover{border-color:var(--J);color:var(--J);}
+.band-btn.on{background:var(--J);color:#fff;border-color:var(--J);}
+
+/* ── TABLE ───────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{background:var(--sur2);padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:1;}
+.tbl td{padding:9px 12px;border-bottom:1px solid rgba(226,220,212,.45);vertical-align:middle;line-height:1.5;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:hover td{background:var(--sur2);}
+.tbl-wrap{overflow-y:auto;max-height:440px;border-radius:6px;border:1px solid var(--bdr);}
+.mn{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+
+/* ── BAR ─────────────────────────────────────── */
+.bw{display:flex;align-items:center;gap:6px;}
+.bb{flex:1;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;min-width:60px;}
+.bf{height:100%;border-radius:3px;}
+.bv{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;min-width:38px;text-align:right;}
+
+/* ── BADGES ─────────────────────────────────── */
+.bdg{display:inline-block;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+.b-g{background:var(--GL);color:var(--G);}
+.b-j{background:var(--JL);color:var(--J);}
+.b-k{background:var(--KL);color:var(--K);}
+.b-ok{background:var(--okL);color:var(--ok);}
+.b-wa{background:var(--waL);color:var(--wa);}
+
+/* ── INFO BOX ────────────────────────────────── */
+.info{font-size:12px;color:var(--mu);background:var(--sur2);border-left:3px solid var(--bdr);padding:11px 14px;border-radius:0 6px 6px 0;margin-top:14px;line-height:1.8;}
+.warn{font-size:12px;background:var(--waL);border-left:3px solid var(--wa);padding:11px 14px;border-radius:0 6px 6px 0;margin-top:14px;line-height:1.8;color:#5c3d00;}
+.good{font-size:12px;background:var(--okL);border-left:3px solid var(--ok);padding:11px 14px;border-radius:0 6px 6px 0;margin-top:14px;line-height:1.8;color:#0e4a22;}
+.alert{font-size:12px;background:var(--rdL);border-left:3px solid var(--rd);padding:11px 14px;border-radius:0 6px 6px 0;margin-top:14px;line-height:1.8;color:#6b1a12;}
+
+/* ── SECTION HEADER ──────────────────────────── */
+.sh{margin-bottom:20px;}
+.sh h2{font-size:16px;font-weight:700;letter-spacing:-.4px;margin-bottom:5px;}
+.sh p{font-size:12px;color:var(--mu);line-height:1.7;}
+
+/* ── DIVIDER ─────────────────────────────────── */
+.divider{height:1px;background:var(--bdr);margin:24px 0;}
+
+/* ── RECOMMEND CARD ──────────────────────────── */
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px;}
+.rec-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:10px;padding:14px 16px;box-shadow:var(--sh);transition:.18s;}
+.rec-card:hover{box-shadow:var(--sh2);border-color:#ccc;}
+.rec-card.star{border-color:var(--ok);background:var(--okL);}
+.rec-rank{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mu);margin-bottom:4px;}
+.rec-name{font-size:13px;font-weight:700;margin-bottom:6px;line-height:1.4;}
+.rec-rate{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;margin-bottom:4px;}
+.rec-meta{font-size:11px;color:var(--mu);}
+
+/* ── TREND CHIP ──────────────────────────────── */
+.trend-up{color:#c0392b;font-weight:700;}
+.trend-dn{color:#1a7a40;font-weight:700;}
+.trend-eq{color:#7a746c;}
+
+/* ── DIFF BAR ────────────────────────────────── */
+.diff-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(226,220,212,.4);}
+.diff-row:last-child{border-bottom:none;}
+.diff-name{font-size:12px;min-width:150px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.diff-bars{flex:1;display:flex;flex-direction:column;gap:3px;}
+.diff-bar-row{display:flex;align-items:center;gap:4px;}
+.diff-label{font-size:10px;color:var(--mu);min-width:20px;}
+.diff-bar-bg{flex:1;height:6px;background:var(--sur2);border-radius:3px;overflow:hidden;}
+.diff-bar-fill{height:100%;border-radius:3px;}
+.diff-pct{font-family:'IBM Plex Mono',monospace;font-size:10px;min-width:36px;text-align:right;font-weight:600;}
+.diff-winner{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;min-width:52px;text-align:center;}
+
+/* ── YEARLY SPARKLINE TABLE ──────────────────── */
+.yr-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.yr-tbl th{background:var(--sur2);padding:8px 10px;font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bdr);}
+.yr-tbl td{padding:8px 10px;border-bottom:1px solid rgba(226,220,212,.4);vertical-align:middle;}
+.yr-tbl tr:last-child td{border-bottom:none;}
+.yr-chip{display:inline-block;padding:2px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;min-width:46px;text-align:center;}
+.yr-chip.hi{background:var(--okL);color:var(--ok);}
+.yr-chip.lo{background:var(--rdL);color:var(--rd);}
+.yr-chip.md{background:var(--waL);color:var(--wa);}
+.yr-chip.na{background:var(--sur2);color:var(--mu2);}
+
+@media(max-width:760px){
+  .hdr,.tabs,.main{padding-left:16px;padding-right:16px;}
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-row">
+    <h1>📊 등급대별 수시 지원·합격 현황 분석</h1>
+    <span class="badge badge-y">3개년 합산 2023·24·25</span>
+    <span class="badge badge-v">3.5등급 초과</span>
+  </div>
+  <p>내신 등급대별 실제 지원 대학 현황 · 교과 vs 종합 합격률 · 타학교 비교 · 연도별 트렌드 (2023·24·25 합산)</p>
+</div>
+
+<nav class="tabs">
+  <button class="tab on" onclick="go('pA',this)"><span class="tn">A</span>등급대별 지원 현황</button>
+  <button class="tab" onclick="go('pB',this)"><span class="tn">B</span>타학교 비교</button>
+</nav>
+
+<div class="main">
+
+<!-- ═══════════════════════════════════════════════ TAB A -->
+<div id="pA" class="panel on">
+  <div class="sh">
+    <h2>등급대별 지원 현황</h2>
+    <p>실제 내신 등급 구간별로 교과·종합 지원 대학과 합격률을 분석합니다. 합격 집중도·교과vs종합 유불리·연도별 트렌드를 함께 확인하세요.</p>
+  </div>
+
+  <!-- 등급대 버튼 -->
+  <div class="band-wrap" id="aBandBtns"></div>
+
+  <!-- KPI 4칸 -->
+  <div class="g4" style="margin-bottom:20px;">
+    <div class="kpi"><div class="kl">교과 지원</div><div class="kv cr" id="aGn">—</div><div class="kd" id="aGd">등급대를 선택하세요</div></div>
+    <div class="kpi"><div class="kl">교과 합격률</div><div class="kv cr" id="aGr">—</div><div class="kd" id="aGrd"></div></div>
+    <div class="kpi"><div class="kl">종합 지원</div><div class="kv cb" id="aJn">—</div><div class="kd" id="aJd"></div></div>
+    <div class="kpi"><div class="kl">종합 합격률</div><div class="kv cb" id="aJr">—</div><div class="kd" id="aJrd"></div></div>
+  </div>
+
+  <!-- ① 합격 집중도 추천 -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">⭐ 이 등급대 합격 집중 대학 — 우선 검토 추천</div>
+    <div class="card-sub">3개년 합산 합격건수 2건 이상·합격률 30% 이상인 대학. 실제 합격이 집중된 현실적 목표 대학입니다.</div>
+    <div id="aRec" class="rec-grid"></div>
+  </div>
+
+  <!-- ② 교과 vs 종합 유불리 -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">⚖️ 교과 vs 종합 유불리 — 같은 대학·같은 등급대</div>
+    <div class="card-sub">교과·종합 양쪽 모두 지원 실적이 있는 대학에서 어느 전형이 더 유리했는지 비교합니다. <strong>5건 미만은 ⚠ 소표본 경고</strong>를 표시하니 해석 시 주의하세요.</div>
+    <div id="aFavWrap"></div>
+  </div>
+
+  <!-- ③ 교과·종합 대학별 현황 -->
+  <div class="g2" style="margin-bottom:16px;">
+    <div>
+      <div class="card" style="margin-bottom:12px;">
+        <h3>📕 교과전형 지원 대학 (지원건수 순)</h3>
+        <div style="position:relative;height:260px;"><canvas id="aChartG"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap"><table class="tbl" id="aTableG"></table></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px;">
+        <h3>📘 종합전형 지원 대학 (지원건수 순)</h3>
+        <div style="position:relative;height:260px;"><canvas id="aChartJ"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap"><table class="tbl" id="aTableJ"></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 연도별 트렌드 -->
+  <div class="card">
+    <div class="card-title">📅 연도별 합격률 트렌드 (2023 → 2024 → 2025)</div>
+    <div class="card-sub">같은 등급대에서 연도별로 합격률이 어떻게 변했는지 확인합니다. 상승·하락 추세로 지원 난이도 변화를 읽을 수 있습니다.</div>
+    <div class="g2" style="margin-top:12px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--G);margin-bottom:10px;">🔴 교과전형</div>
+        <div style="position:relative;height:200px;"><canvas id="aYearlyG"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--J);margin-bottom:10px;">🔵 종합전형</div>
+        <div style="position:relative;height:200px;"><canvas id="aYearlyJ"></canvas></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <table class="yr-tbl" id="aYearlyTbl"></table>
+    </div>
+  </div>
+
+</div><!-- /pA -->
+
+<!-- ═══════════════════════════════════════════════ TAB B -->
+<div id="pB" class="panel">
+  <div class="sh">
+    <h2>타학교 비교 — 우리학교 vs 비교학교</h2>
+    <p>같은 등급대 내신 구간에서 두 학교의 지원 경향, 교과/종합 선택 비율, 합격률 격차를 비교합니다. 비교학교: 3개년(2024·25·26), 우리학교: 3개년(2023·24·25)</p>
+  </div>
+
+  <div class="band-wrap" id="bBandBtns"></div>
+
+  <!-- KPI 비교 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card" style="border-top:3px solid var(--G);">
+      <h3 style="color:var(--G);">🏫 우리학교</h3>
+      <div class="g2" style="margin-top:6px;gap:8px;">
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">교과 지원</div><div id="bMyGn" class="mn cr" style="font-size:20px;">—</div></div>
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">교과 합격률</div><div id="bMyGr" class="mn cr" style="font-size:20px;">—</div></div>
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">종합 지원</div><div id="bMyJn" class="mn cb" style="font-size:20px;">—</div></div>
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">종합 합격률</div><div id="bMyJr" class="mn cb" style="font-size:20px;">—</div></div>
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--K);">
+      <h3 style="color:var(--K);">🏫 비교학교</h3>
+      <div class="g2" style="margin-top:6px;gap:8px;">
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">교과 지원</div><div id="bOtGn" class="mn ck" style="font-size:20px;">—</div></div>
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">교과 합격률</div><div id="bOtGr" class="mn ck" style="font-size:20px;">—</div></div>
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">종합 지원</div><div id="bOtJn" class="mn" style="font-size:20px;color:var(--KJ);">—</div></div>
+        <div><div style="font-size:10px;color:var(--mu);margin-bottom:3px;">종합 합격률</div><div id="bOtJr" class="mn" style="font-size:20px;color:var(--KJ);">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 합격률 격차 강조 -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">🎯 합격률 격차 직접 비교</div>
+    <div class="card-sub">같은 내신 구간에서 교과·종합 각각 누가 더 유리한지, 격차가 얼마나 되는지 직관적으로 확인합니다.</div>
+    <div style="position:relative;height:240px;margin-top:10px;"><canvas id="bRateChart"></canvas></div>
+    <div id="bGapSummary" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+  </div>
+
+  <!-- 전형 선택 비율 -->
+  <div class="g2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">📊 전형 선택 비율 비교</div>
+      <div class="card-sub">이 등급대에서 교과와 종합을 각각 몇 % 선택했는지 비교합니다.</div>
+      <div style="position:relative;height:220px;margin-top:8px;"><canvas id="bRatioChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 전 등급대 합격률 추이 비교</div>
+      <div class="card-sub">4.0~7.5 전 구간에 걸쳐 두 학교의 교과 합격률 추이를 비교합니다.</div>
+      <div style="position:relative;height:220px;margin-top:8px;"><canvas id="bTrendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 동일 대학 합격률 격차 상세 -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-title" id="bGtitle">📕 교과 — 대학별 합격률 격차</div>
+      <div class="card-sub">양쪽 학교가 모두 지원한 대학에서 합격률 차이를 막대로 표시합니다. 노란 배경 = 양쪽 모두 지원.</div>
+      <div class="tbl-wrap" style="margin-top:10px;"><table class="tbl" id="bTableG"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="bJtitle">📘 종합 — 대학별 합격률 격차</div>
+      <div class="card-sub">종합전형에서 두 학교가 같은 대학에 지원했을 때 합격률 비교입니다.</div>
+      <div class="tbl-wrap" style="margin-top:10px;"><table class="tbl" id="bTableJ"></table></div>
+    </div>
+  </div>
+
+</div><!-- /pB -->
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════════════════
+// 공통 설정
+// ══════════════════════════════════════════════════════════
+const cG='#c0392b', cGL='rgba(192,57,43,.15)';
+const cJ='#1a5fa0', cJL='rgba(26,95,160,.15)';
+const cK='#2d7d46', cKL='rgba(45,125,70,.15)';
+const cKJ='#5aaa72', cKJL='rgba(90,170,114,.15)';
+
+const bands     = ['4.0','4.5','5.0','5.5','6.0','6.5','7.0','7.5'];
+const bandLabels= ['3.51~4.0','4.01~4.5','4.51~5.0','5.01~5.5','5.51~6.0','6.01~6.5','6.51~7.0','7.01~7.5'];
+
+const baseOpt = {
+  plugins:{legend:{display:false},
+    tooltip:{backgroundColor:'#fff',borderColor:'#ddd',borderWidth:1,titleColor:'#1a1816',bodyColor:'#7a746c',padding:10,
+      titleFont:{family:"'Noto Sans KR'",size:12},bodyFont:{family:"'IBM Plex Mono'",size:11}}},
+  scales:{
+    x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10}}},
+    y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10}}}
+  }
+};
+
+function pct(w,n){return n>0?+(w/n*100).toFixed(1):null;}
+function pctStr(w,n){return n>0?(w/n*100).toFixed(1)+'%':'—';}
+function barHtml(v,c){
+  if(v===null||v===undefined) return '<span style="color:#ccc">—</span>';
+  return `<div class="bw"><div class="bb"><div class="bf" style="width:${Math.min(v,100)}%;background:${c}"></div></div><span class="bv" style="color:${c}">${v.toFixed(1)}%</span></div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// 우리학교 3개년 원본 데이터 (실제 지원자 등급 구간 기반)
+// ══════════════════════════════════════════════════════════
+const myData = {
+  '4.0':{g_n:184,g_w:68,j_n:89,j_w:12,
+    g:[{u:'단국대학교(천안)',n:20,w:6,r:30.0},{u:'경기대학교(수원)',n:15,w:0,r:0.0},{u:'수원대학교(수원)',n:14,w:2,r:14.3},{u:'한신대학교(오산)',n:10,w:7,r:70.0},{u:'가천대학교(성남)',n:9,w:1,r:11.1},{u:'상명대학교(천안)',n:7,w:4,r:57.1},{u:'호서대학교(아산)',n:6,w:3,r:50.0},{u:'성결대학교(안양)',n:5,w:3,r:60.0},{u:'충남대학교(대전)',n:5,w:0,r:0.0},{u:'안양대학교(안양)',n:5,w:0,r:0.0},{u:'을지대학교(성남)',n:5,w:2,r:40.0},{u:'충북대학교(청주)',n:5,w:2,r:40.0},{u:'강남대학교(용인)',n:4,w:2,r:50.0},{u:'한세대학교(군포)',n:4,w:3,r:75.0},{u:'한국기술교육대학교(천안)',n:4,w:3,r:75.0}],
+    j:[{u:'경기대학교(수원)',n:23,w:1,r:4.3},{u:'가천대학교(성남)',n:6,w:1,r:16.7},{u:'명지대학교(용인)',n:6,w:2,r:33.3},{u:'인천대학교(인천)',n:5,w:0,r:0.0},{u:'덕성여자대학교(서울)',n:4,w:1,r:25.0},{u:'상명대학교(서울)',n:3,w:0,r:0.0},{u:'단국대학교(천안)',n:3,w:1,r:33.3},{u:'성신여자대학교(서울)',n:3,w:0,r:0.0},{u:'강남대학교(용인)',n:3,w:3,r:100.0},{u:'아주대학교(수원)',n:3,w:0,r:0.0},{u:'인하대학교(인천)',n:3,w:0,r:0.0},{u:'명지대학교(서울)',n:2,w:0,r:0.0},{u:'가톨릭대학교(성심)',n:2,w:0,r:0.0}],
+    fav:[{u:'강남대학교(용인)',gn:4,gw:2,gr:50,jn:3,jw:3,jr:100,diff:-50},{u:'명지대학교(용인)',gn:2,gw:0,gr:0,jn:6,jw:2,jr:33.3,diff:-33.3},{u:'가천대학교(성남)',gn:9,gw:1,gr:11.1,jn:6,jw:1,jr:16.7,diff:-5.6},{u:'단국대학교(천안)',gn:20,gw:6,gr:30,jn:3,jw:1,jr:33.3,diff:-3.3},{u:'경기대학교(수원)',gn:15,gw:0,gr:0,jn:23,jw:1,jr:4.3,diff:-4.3}]},
+  '4.5':{g_n:278,g_w:102,j_n:122,j_w:14,
+    g:[{u:'단국대학교(천안)',n:24,w:1,r:4.2},{u:'남서울대학교(천안)',n:22,w:14,r:63.6},{u:'수원대학교(수원)',n:22,w:3,r:13.6},{u:'상명대학교(천안)',n:18,w:10,r:55.6},{u:'한신대학교(오산)',n:13,w:3,r:23.1},{u:'백석대학교(천안)',n:11,w:8,r:72.7},{u:'성결대학교(안양)',n:11,w:4,r:36.4},{u:'순천향대학교(아산)',n:10,w:5,r:50.0},{u:'한세대학교(군포)',n:8,w:2,r:25.0},{u:'한서대학교(서산)',n:7,w:2,r:28.6},{u:'호서대학교(아산)',n:7,w:3,r:42.9},{u:'한국공학대학교(시흥)',n:6,w:1,r:16.7},{u:'한국기술교육대학교(천안)',n:6,w:1,r:16.7},{u:'평택대학교(평택)',n:5,w:2,r:40.0}],
+    j:[{u:'경기대학교(수원)',n:20,w:1,r:5.0},{u:'한양대학교(ERICA)',n:8,w:0,r:0.0},{u:'명지대학교(용인)',n:7,w:0,r:0.0},{u:'가톨릭대학교(성심)',n:6,w:0,r:0.0},{u:'고려대학교(세종)',n:5,w:0,r:0.0},{u:'강남대학교(용인)',n:4,w:1,r:25.0},{u:'가천대학교(성남)',n:4,w:0,r:0.0},{u:'인천대학교(인천)',n:3,w:0,r:0.0},{u:'단국대학교(천안)',n:3,w:1,r:33.3},{u:'단국대학교(죽전)',n:3,w:0,r:0.0}],
+    fav:[{u:'건국대학교(글로컬)',gn:2,gw:1,gr:50,jn:2,jw:2,jr:100,diff:-50},{u:'나사렛대학교(천안)',gn:2,gw:1,gr:50,jn:2,jw:0,jr:0,diff:50},{u:'고려대학교(세종)',gn:4,gw:2,gr:50,jn:5,jw:0,jr:0,diff:50},{u:'호서대학교(아산)',gn:7,gw:3,gr:42.9,jn:2,jw:0,jr:0,diff:42.9},{u:'단국대학교(천안)',gn:24,gw:1,gr:4.2,jn:3,jw:1,jr:33.3,diff:-29.1},{u:'한신대학교(오산)',gn:13,gw:3,gr:23.1,jn:2,jw:1,jr:50,diff:-26.9}]},
+  '5.0':{g_n:235,g_w:66,j_n:84,j_w:11,
+    g:[{u:'남서울대학교(천안)',n:22,w:9,r:40.9},{u:'백석대학교(천안)',n:17,w:6,r:35.3},{u:'호서대학교(아산)',n:16,w:7,r:43.8},{u:'한신대학교(오산)',n:15,w:5,r:33.3},{u:'상명대학교(천안)',n:13,w:3,r:23.1},{u:'협성대학교(화성)',n:12,w:5,r:41.7},{u:'수원대학교(수원)',n:11,w:0,r:0.0},{u:'순천향대학교(아산)',n:9,w:2,r:22.2},{u:'성결대학교(안양)',n:8,w:1,r:12.5},{u:'선문대학교(아산)',n:7,w:6,r:85.7},{u:'한세대학교(군포)',n:7,w:1,r:14.3},{u:'호서대학교(천안)',n:6,w:2,r:33.3},{u:'국립공주대학교(천안)',n:6,w:1,r:16.7},{u:'한경국립대학교(안성)',n:8,w:0,r:0.0}],
+    j:[{u:'단국대학교(천안)',n:8,w:1,r:12.5},{u:'한신대학교(오산)',n:7,w:2,r:28.6},{u:'순천향대학교(아산)',n:5,w:1,r:20.0},{u:'경기대학교(수원)',n:5,w:0,r:0.0},{u:'아주대학교(수원)',n:4,w:0,r:0.0},{u:'한양대학교(ERICA)',n:4,w:0,r:0.0},{u:'상명대학교(천안)',n:4,w:1,r:25.0},{u:'가톨릭대학교(성심)',n:4,w:0,r:0.0},{u:'협성대학교(화성)',n:3,w:1,r:33.3},{u:'남서울대학교(천안)',n:2,w:2,r:100.0}],
+    fav:[{u:'남서울대학교(천안)',gn:22,gw:9,gr:40.9,jn:2,jw:2,jr:100,diff:-59.1},{u:'단국대학교(천안)',gn:5,gw:0,gr:0,jn:8,jw:1,jr:12.5,diff:-12.5},{u:'호서대학교(아산)',gn:16,gw:7,gr:43.8,jn:3,jw:1,jr:33.3,diff:10.5},{u:'협성대학교(화성)',gn:12,gw:5,gr:41.7,jn:3,jw:1,jr:33.3,diff:8.4},{u:'한신대학교(오산)',gn:15,gw:5,gr:33.3,jn:7,jw:2,jr:28.6,diff:4.7}]},
+  '5.5':{g_n:267,g_w:88,j_n:55,j_w:15,
+    g:[{u:'남서울대학교(천안)',n:37,w:26,r:70.3},{u:'백석대학교(천안)',n:28,w:12,r:42.9},{u:'한신대학교(오산)',n:14,w:3,r:21.4},{u:'호서대학교(아산)',n:14,w:4,r:28.6},{u:'성결대학교(안양)',n:13,w:0,r:0.0},{u:'순천향대학교(아산)',n:12,w:2,r:16.7},{u:'협성대학교(화성)',n:11,w:3,r:27.3},{u:'수원대학교(수원)',n:10,w:0,r:0.0},{u:'나사렛대학교(천안)',n:8,w:5,r:62.5},{u:'한경국립대학교(안성)',n:7,w:1,r:14.3},{u:'평택대학교(평택)',n:5,w:4,r:80.0},{u:'상명대학교(천안)',n:5,w:1,r:20.0},{u:'국립공주대학교(천안)',n:5,w:1,r:20.0}],
+    j:[{u:'단국대학교(천안)',n:6,w:2,r:33.3},{u:'한신대학교(오산)',n:6,w:2,r:33.3},{u:'강남대학교(용인)',n:5,w:1,r:20.0},{u:'백석대학교(천안)',n:4,w:1,r:25.0},{u:'나사렛대학교(천안)',n:2,w:1,r:50.0},{u:'협성대학교(화성)',n:2,w:2,r:100.0},{u:'호서대학교(천안)',n:2,w:2,r:100.0}],
+    fav:[{u:'호서대학교(천안)',gn:9,gw:1,gr:11.1,jn:2,jw:2,jr:100,diff:-88.9},{u:'협성대학교(화성)',gn:11,gw:3,gr:27.3,jn:2,jw:2,jr:100,diff:-72.7},{u:'호서대학교(아산)',gn:14,gw:4,gr:28.6,jn:2,jw:0,jr:0,diff:28.6},{u:'백석대학교(천안)',gn:28,gw:12,gr:42.9,jn:4,jw:1,jr:25,diff:17.9},{u:'한신대학교(오산)',gn:14,gw:3,gr:21.4,jn:6,jw:2,jr:33.3,diff:-11.9}]},
+  '6.0':{g_n:140,g_w:50,j_n:37,j_w:7,
+    g:[{u:'남서울대학교(천안)',n:25,w:14,r:56.0},{u:'백석대학교(천안)',n:15,w:4,r:26.7},{u:'나사렛대학교(천안)',n:7,w:4,r:57.1},{u:'성결대학교(안양)',n:7,w:1,r:14.3},{u:'협성대학교(화성)',n:8,w:0,r:0.0},{u:'호서대학교(아산)',n:6,w:1,r:16.7},{u:'선문대학교(아산)',n:5,w:3,r:60.0},{u:'목원대학교(대전)',n:5,w:3,r:60.0},{u:'안양대학교(안양)',n:5,w:0,r:0.0},{u:'경동대학교(원주문막)',n:2,w:1,r:50.0}],
+    j:[{u:'한신대학교(오산)',n:5,w:1,r:20.0},{u:'강남대학교(용인)',n:3,w:0,r:0.0},{u:'단국대학교(천안)',n:3,w:0,r:0.0},{u:'남서울대학교(천안)',n:2,w:1,r:50.0},{u:'국립강릉원주대학교(강릉)',n:2,w:2,r:100.0},{u:'호서대학교(아산)',n:2,w:0,r:0.0}],
+    fav:[{u:'호서대학교(아산)',gn:6,gw:1,gr:16.7,jn:2,jw:0,jr:0,diff:16.7},{u:'남서울대학교(천안)',gn:25,gw:14,gr:56,jn:2,jw:1,jr:50,diff:6}]},
+  '6.5':{g_n:131,g_w:37,j_n:32,j_w:7,
+    g:[{u:'백석대학교(천안)',n:17,w:3,r:17.6},{u:'남서울대학교(천안)',n:13,w:3,r:23.1},{u:'나사렛대학교(천안)',n:7,w:3,r:42.9},{u:'성결대학교(안양)',n:7,w:1,r:14.3},{u:'호서대학교(천안)',n:7,w:0,r:0.0},{u:'선문대학교(아산)',n:5,w:4,r:80.0},{u:'호서대학교(아산)',n:6,w:1,r:16.7},{u:'평택대학교(평택)',n:5,w:1,r:20.0},{u:'한신대학교(오산)',n:5,w:1,r:20.0},{u:'서원대학교(청주)',n:4,w:1,r:25.0}],
+    j:[{u:'협성대학교(화성)',n:3,w:0,r:0.0},{u:'한신대학교(오산)',n:3,w:0,r:0.0},{u:'순천향대학교(아산)',n:2,w:1,r:50.0},{u:'남서울대학교(천안)',n:2,w:0,r:0.0},{u:'상명대학교(천안)',n:2,w:1,r:50.0},{u:'전주대학교(전주)',n:2,w:2,r:100.0}],
+    fav:[]},
+  '7.0':{g_n:75,g_w:22,j_n:15,j_w:6,
+    g:[{u:'남서울대학교(천안)',n:11,w:7,r:63.6},{u:'호서대학교(아산)',n:8,w:1,r:12.5},{u:'나사렛대학교(천안)',n:7,w:2,r:28.6},{u:'백석대학교(천안)',n:7,w:1,r:14.3},{u:'선문대학교(아산)',n:3,w:2,r:66.7},{u:'협성대학교(화성)',n:4,w:1,r:25.0},{u:'한신대학교(오산)',n:4,w:1,r:25.0},{u:'서원대학교(청주)',n:3,w:1,r:33.3},{u:'목원대학교(대전)',n:2,w:1,r:50.0},{u:'유원대학교(아산)',n:2,w:2,r:100.0}],
+    j:[{u:'나사렛대학교(천안)',n:2,w:2,r:100.0},{u:'순천향대학교(아산)',n:2,w:1,r:50.0},{u:'호서대학교(아산)',n:2,w:0,r:0.0}],
+    fav:[]},
+  '7.5':{g_n:44,g_w:5,j_n:8,j_w:1,
+    g:[{u:'나사렛대학교(천안)',n:6,w:2,r:33.3},{u:'호서대학교(천안)',n:3,w:0,r:0.0},{u:'국립군산대학교(군산)',n:2,w:1,r:50.0},{u:'남서울대학교(천안)',n:2,w:0,r:0.0},{u:'한신대학교(오산)',n:2,w:0,r:0.0},{u:'협성대학교(화성)',n:2,w:0,r:0.0}],
+    j:[{u:'한신대학교(오산)',n:2,w:0,r:0.0}],
+    fav:[]}
+};
+
+// 비교학교 데이터
+const otData = {
+  '4.0':{g_n:74,g_w:26,j_n:204,j_w:34,
+    g:[{u:'한국외국어대학교(용인)',n:11,w:10,r:90.9},{u:'수원대학교(수원)',n:8,w:1,r:12.5},{u:'세종대학교(서울)',n:6,w:0,r:0.0},{u:'단국대학교(천안)',n:4,w:2,r:50.0},{u:'가천대학교(성남)',n:4,w:2,r:50.0},{u:'건국대학교(서울)',n:4,w:0,r:0.0},{u:'인천대학교(인천)',n:4,w:0,r:0.0},{u:'충북대학교(청주)',n:2,w:1,r:50.0},{u:'한국공학대학교(시흥)',n:2,w:0,r:0.0},{u:'한양대학교(ERICA)',n:2,w:0,r:0.0}],
+    j:[{u:'경기대학교(수원)',n:21,w:7,r:33.3},{u:'아주대학교(수원)',n:17,w:4,r:23.5},{u:'가천대학교(성남)',n:15,w:2,r:13.3},{u:'성신여자대학교(서울)',n:14,w:1,r:7.1},{u:'서울여자대학교(서울)',n:11,w:0,r:0.0},{u:'숭실대학교(서울)',n:9,w:0,r:0.0},{u:'한양대학교(ERICA)',n:8,w:0,r:0.0},{u:'가톨릭대학교(성심)',n:7,w:1,r:14.3},{u:'경희대학교(서울)',n:7,w:1,r:14.3},{u:'광운대학교(서울)',n:6,w:1,r:16.7}]},
+  '4.5':{g_n:137,g_w:44,j_n:289,j_w:48,
+    g:[{u:'수원대학교(수원)',n:24,w:4,r:16.7},{u:'가천대학교(성남)',n:9,w:1,r:11.1},{u:'한국외국어대학교(용인)',n:8,w:2,r:25.0},{u:'남서울대학교(천안)',n:6,w:1,r:16.7},{u:'단국대학교(천안)',n:6,w:2,r:33.3},{u:'건국대학교(글로컬)',n:5,w:2,r:40.0},{u:'상명대학교(천안)',n:5,w:2,r:40.0},{u:'경동대학교(원주문막)',n:4,w:4,r:100.0},{u:'한신대학교(오산)',n:3,w:3,r:100.0},{u:'한경국립대학교(안성)',n:3,w:3,r:100.0}],
+    j:[{u:'경기대학교(수원)',n:28,w:2,r:7.1},{u:'가톨릭대학교(성심)',n:19,w:2,r:10.5},{u:'가천대학교(성남)',n:16,w:1,r:6.2},{u:'아주대학교(수원)',n:14,w:0,r:0.0},{u:'강남대학교(용인)',n:11,w:8,r:72.7},{u:'삼육대학교(서울)',n:11,w:3,r:27.3},{u:'동덕여자대학교(서울)',n:10,w:3,r:30.0},{u:'한양대학교(ERICA)',n:9,w:1,r:11.1},{u:'단국대학교(죽전)',n:8,w:3,r:37.5},{u:'단국대학교(천안)',n:7,w:3,r:42.9}]},
+  '5.0':{g_n:143,g_w:40,j_n:247,j_w:28,
+    g:[{u:'수원대학교(수원)',n:23,w:2,r:8.7},{u:'남서울대학교(천안)',n:12,w:5,r:41.7},{u:'한신대학교(오산)',n:9,w:4,r:44.4},{u:'한세대학교(군포)',n:7,w:0,r:0.0},{u:'순천향대학교(아산)',n:6,w:0,r:0.0},{u:'백석대학교(천안)',n:5,w:2,r:40.0},{u:'협성대학교(화성)',n:4,w:3,r:75.0},{u:'호서대학교(천안)',n:3,w:3,r:100.0},{u:'청주대학교(청주)',n:3,w:3,r:100.0}],
+    j:[{u:'경기대학교(수원)',n:21,w:1,r:4.8},{u:'강남대학교(용인)',n:12,w:4,r:33.3},{u:'성신여자대학교(서울)',n:12,w:1,r:8.3},{u:'단국대학교(천안)',n:11,w:1,r:9.1},{u:'삼육대학교(서울)',n:11,w:0,r:0.0},{u:'숭실대학교(서울)',n:9,w:3,r:33.3},{u:'동덕여자대학교(서울)',n:8,w:2,r:25.0},{u:'순천향대학교(아산)',n:6,w:3,r:50.0}]},
+  '5.5':{g_n:101,g_w:31,j_n:138,j_w:18,
+    g:[{u:'수원대학교(수원)',n:13,w:2,r:15.4},{u:'성결대학교(안양)',n:9,w:1,r:11.1},{u:'남서울대학교(천안)',n:7,w:4,r:57.1},{u:'한신대학교(오산)',n:6,w:4,r:66.7},{u:'선문대학교(아산)',n:4,w:4,r:100.0},{u:'평택대학교(평택)',n:4,w:2,r:50.0},{u:'백석대학교(천안)',n:3,w:2,r:66.7},{u:'호서대학교(아산)',n:3,w:1,r:33.3},{u:'한세대학교(군포)',n:3,w:2,r:66.7}],
+    j:[{u:'경기대학교(수원)',n:12,w:0,r:0.0},{u:'한국공학대학교(시흥)',n:10,w:1,r:10.0},{u:'강남대학교(용인)',n:9,w:1,r:11.1},{u:'단국대학교(천안)',n:5,w:2,r:40.0},{u:'한신대학교(오산)',n:4,w:2,r:50.0}]},
+  '6.0':{g_n:156,g_w:49,j_n:202,j_w:17,
+    g:[{u:'수원대학교(수원)',n:20,w:1,r:5.0},{u:'남서울대학교(천안)',n:14,w:5,r:35.7},{u:'한신대학교(오산)',n:9,w:3,r:33.3},{u:'백석대학교(천안)',n:9,w:2,r:22.2},{u:'성결대학교(안양)',n:7,w:2,r:28.6},{u:'호서대학교(아산)',n:6,w:4,r:66.7},{u:'선문대학교(아산)',n:3,w:3,r:100.0},{u:'한남대학교(대전)',n:4,w:2,r:50.0}],
+    j:[{u:'경기대학교(수원)',n:17,w:2,r:11.8},{u:'단국대학교(죽전)',n:11,w:0,r:0.0},{u:'아주대학교(수원)',n:9,w:0,r:0.0},{u:'동덕여자대학교(서울)',n:8,w:0,r:0.0},{u:'인하대학교(인천)',n:7,w:0,r:0.0},{u:'한신대학교(오산)',n:5,w:2,r:40.0}]},
+  '6.5':{g_n:102,g_w:27,j_n:116,j_w:17,
+    g:[{u:'수원대학교(수원)',n:11,w:0,r:0.0},{u:'남서울대학교(천안)',n:10,w:5,r:50.0},{u:'나사렛대학교(천안)',n:5,w:5,r:100.0},{u:'백석대학교(천안)',n:5,w:1,r:20.0},{u:'선문대학교(아산)',n:4,w:3,r:75.0},{u:'호서대학교(아산)',n:4,w:2,r:50.0},{u:'평택대학교(평택)',n:6,w:3,r:50.0},{u:'경동대학교(원주문막)',n:5,w:2,r:40.0}],
+    j:[{u:'경기대학교(수원)',n:10,w:0,r:0.0},{u:'동덕여자대학교(서울)',n:8,w:0,r:0.0},{u:'남서울대학교(천안)',n:3,w:3,r:100.0},{u:'선문대학교(아산)',n:3,w:3,r:100.0},{u:'한신대학교(오산)',n:3,w:1,r:33.3}]},
+  '7.0':{g_n:84,g_w:29,j_n:86,j_w:17,
+    g:[{u:'남서울대학교(천안)',n:12,w:8,r:66.7},{u:'백석대학교(천안)',n:9,w:2,r:22.2},{u:'나사렛대학교(천안)',n:6,w:4,r:66.7},{u:'협성대학교(화성)',n:6,w:3,r:50.0},{u:'호서대학교(아산)',n:4,w:3,r:75.0},{u:'화성의과학대학교(화성)',n:2,w:2,r:100.0},{u:'선문대학교(아산)',n:2,w:1,r:50.0}],
+    j:[{u:'선문대학교(아산)',n:5,w:4,r:80.0},{u:'단국대학교(죽전)',n:6,w:0,r:0.0},{u:'호서대학교(아산)',n:3,w:2,r:66.7},{u:'백석대학교(천안)',n:3,w:1,r:33.3}]},
+  '7.5':{g_n:52,g_w:14,j_n:19,j_w:1,
+    g:[{u:'서원대학교(청주)',n:4,w:1,r:25.0},{u:'한신대학교(오산)',n:4,w:0,r:0.0},{u:'남서울대학교(천안)',n:2,w:2,r:100.0},{u:'김천대학교(김천)',n:2,w:1,r:50.0},{u:'협성대학교(화성)',n:2,w:0,r:0.0}],
+    j:[{u:'서경대학교(서울)',n:3,w:0,r:0.0},{u:'동덕여자대학교(서울)',n:2,w:0,r:0.0}]}
+};
+
+// 연도별 데이터
+const yearlyData = {
+  2023:{
+    '4.0':{g_n:26,g_w:8,g_r:30.8,j_n:17,j_w:5,j_r:29.4},
+    '4.5':{g_n:90,g_w:42,g_r:46.7,j_n:35,j_w:6,j_r:17.1},
+    '5.0':{g_n:56,g_w:21,g_r:37.5,j_n:29,j_w:5,j_r:17.2},
+    '5.5':{g_n:62,g_w:25,g_r:40.3,j_n:14,j_w:4,j_r:28.6},
+    '6.0':{g_n:46,g_w:18,g_r:39.1,j_n:5,j_w:1,j_r:20.0},
+    '6.5':{g_n:41,g_w:16,g_r:39.0,j_n:9,j_w:2,j_r:22.2},
+    '7.0':{g_n:17,g_w:8,g_r:47.1,j_n:5,j_w:4,j_r:80.0},
+    '7.5':{g_n:10,g_w:2,g_r:20.0,j_n:0,j_w:0,j_r:null}
+  },
+  2024:{
+    '4.0':{g_n:81,g_w:36,g_r:44.4,j_n:33,j_w:1,j_r:3.0},
+    '4.5':{g_n:101,g_w:29,g_r:28.7,j_n:44,j_w:2,j_r:4.5},
+    '5.0':{g_n:92,g_w:21,g_r:22.8,j_n:33,j_w:4,j_r:12.1},
+    '5.5':{g_n:74,g_w:21,g_r:28.4,j_n:22,j_w:5,j_r:22.7},
+    '6.0':{g_n:48,g_w:16,g_r:33.3,j_n:20,j_w:4,j_r:20.0},
+    '6.5':{g_n:27,g_w:6,g_r:22.2,j_n:10,j_w:1,j_r:10.0},
+    '7.0':{g_n:23,g_w:6,g_r:26.1,j_n:1,j_w:0,j_r:0.0},
+    '7.5':{g_n:12,g_w:0,g_r:0.0,j_n:5,j_w:1,j_r:20.0}
+  },
+  2025:{
+    '4.0':{g_n:77,g_w:24,g_r:31.2,j_n:39,j_w:6,j_r:15.4},
+    '4.5':{g_n:87,g_w:31,g_r:35.6,j_n:43,j_w:6,j_r:14.0},
+    '5.0':{g_n:87,g_w:24,g_r:27.6,j_n:22,j_w:2,j_r:9.1},
+    '5.5':{g_n:131,g_w:42,g_r:32.1,j_n:19,j_w:6,j_r:31.6},
+    '6.0':{g_n:46,g_w:16,g_r:34.8,j_n:12,j_w:2,j_r:16.7},
+    '6.5':{g_n:63,g_w:15,g_r:23.8,j_n:13,j_w:4,j_r:30.8},
+    '7.0':{g_n:35,g_w:8,g_r:22.9,j_n:9,j_w:2,j_r:22.2},
+    '7.5':{g_n:22,g_w:3,g_r:13.6,j_n:3,j_w:0,j_r:0.0}
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+// TAB A 로직
+// ══════════════════════════════════════════════════════════
+let aGChart=null, aJChart=null, aYGChart=null, aYJChart=null;
+let aBandIdx=0;
+
+function buildBandBtns(containerId, onClickFn){
+  const cont=document.getElementById(containerId);
+  bands.forEach((b,i)=>{
+    const btn=document.createElement('button');
+    btn.className='band-btn'+(i===0?' on':'');
+    btn.textContent=bandLabels[i];
+    btn.dataset.idx=i;
+    btn.onclick=function(){
+      cont.querySelectorAll('.band-btn').forEach(x=>x.classList.remove('on'));
+      this.classList.add('on');
+      onClickFn(i);
+    };
+    cont.appendChild(btn);
+  });
+}
+
+function renderA(idx){
+  aBandIdx=idx;
+  const b=bands[idx], dl=bandLabels[idx];
+  const d=myData[b]||{g_n:0,g_w:0,j_n:0,j_w:0,g:[],j:[],fav:[]};
+
+  document.getElementById('aGn').textContent=d.g_n+'건';
+  document.getElementById('aGd').textContent=`합격 ${d.g_w}건`;
+  document.getElementById('aGr').textContent=pctStr(d.g_w,d.g_n);
+  document.getElementById('aGrd').textContent=`교과 내신 ${dl}`;
+  document.getElementById('aJn').textContent=d.j_n+'건';
+  document.getElementById('aJd').textContent=`합격 ${d.j_w}건`;
+  document.getElementById('aJr').textContent=pctStr(d.j_w,d.j_n);
+  document.getElementById('aJrd').textContent=`종합 내신 ${dl}`;
+
+  // ① 합격 집중도 추천
+  const recData=[...d.g.map(x=>({...x,type:'교과',color:cG})),...d.j.map(x=>({...x,type:'종합',color:cJ}))]
+    .filter(x=>x.w>=2&&x.r>=30).sort((a,b)=>b.w-a.w||b.r-a.r).slice(0,8);
+  const recEl=document.getElementById('aRec');
+  if(recData.length===0){
+    recEl.innerHTML='<div style="color:var(--mu);font-size:12px;padding:12px 0;">이 등급대에서 합격률 30% 이상 대학이 없습니다.</div>';
+  } else {
+    recEl.innerHTML=recData.map((x,i)=>`
+      <div class="rec-card${i<3?' star':''}">
+        <div class="rec-rank">${i<3?'⭐':''} #${i+1} · <span class="bdg ${x.type==='교과'?'b-g':'b-j'}">${x.type}</span></div>
+        <div class="rec-name">${x.u.replace(/\(.+\)/,'')}</div>
+        <div class="rec-rate" style="color:${x.color}">${x.r.toFixed(1)}%</div>
+        <div class="rec-meta">합격 ${x.w}/${x.n}건</div>
+      </div>`).join('');
+  }
+
+  // ② 교과 vs 종합 유불리 — 양쪽 모두 2건 이상, 5건 미만은 ⚠ 경고
+  const favEl=document.getElementById('aFavWrap');
+  const fav=(d.fav||[]).filter(x=>x.gn>=2&&x.jn>=2&&Math.abs(x.diff)>=5).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+  const favSmall=[];
+  if(fav.length===0){
+    favEl.innerHTML='<div style="color:var(--mu);font-size:12px;padding:12px 0;">이 등급대에서 양쪽 전형 비교 가능한 대학이 없거나 차이가 미미합니다.</div>';
+  } else {
+    favEl.innerHTML=`<div>${fav.map(x=>{
+      const winner=x.diff>0?'교과':'종합';
+      const wc=x.diff>0?cG:cJ;
+      const lc=x.diff>0?cJ:cG;
+      const wr=x.diff>0?x.gr:x.jr;
+      const lr=x.diff>0?x.jr:x.gr;
+      const wn=x.diff>0?x.gn:x.jn;
+      const ln=x.diff>0?x.jn:x.gn;
+      const smallG=x.gn<5, smallJ=x.jn<5;
+      const warnMsg = smallG||smallJ
+        ? `<span title="교과 ${x.gn}건 / 종합 ${x.jn}건 — 5건 미만 포함, 합격률이 왜곡될 수 있습니다" style="cursor:help;background:var(--waL);color:var(--wa);font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;border:1px solid var(--wa);">⚠ 소표본</span>`
+        : '';
+      return `<div class="diff-row">
+        <div class="diff-name" title="${x.u}">${x.u.replace(/\(.+\)/,'')}</div>
+        <div class="diff-bars">
+          <div class="diff-bar-row">
+            <span class="diff-label" style="color:${wc}">${winner==='교과'?'교':'종'}</span>
+            <div class="diff-bar-bg"><div class="diff-bar-fill" style="width:${wr}%;background:${wc}"></div></div>
+            <span class="diff-pct" style="color:${wc}">${wr.toFixed(1)}%</span>
+          </div>
+          <div class="diff-bar-row">
+            <span class="diff-label" style="color:${lc}">${winner==='교과'?'종':'교'}</span>
+            <div class="diff-bar-bg"><div class="diff-bar-fill" style="width:${lr}%;background:${lc}"></div></div>
+            <span class="diff-pct" style="color:${lc}">${lr.toFixed(1)}%</span>
+          </div>
+        </div>
+        <span class="diff-winner" style="background:${wc}20;color:${wc}">${winner} +${Math.abs(x.diff).toFixed(1)}%p</span>
+        <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
+          <span style="font-size:10px;color:var(--mu);white-space:nowrap">교과 ${x.gn}건 / 종합 ${x.jn}건</span>
+          ${warnMsg}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // ③ 차트+테이블
+  function buildBarChart(canvasId, data, color, old){
+    if(old) old.destroy();
+    const top=data.slice(0,10);
+    return new Chart(document.getElementById(canvasId).getContext('2d'),{
+      type:'bar',data:{
+        labels:top.map(d=>d.u.replace(/\(.+\)/,'')),
+        datasets:[
+          {label:'지원',data:top.map(d=>d.n),backgroundColor:'rgba(0,0,0,.07)',borderColor:'rgba(0,0,0,.18)',borderWidth:1,borderRadius:3},
+          {label:'합격',data:top.map(d=>d.w),backgroundColor:color==='#c0392b'?'rgba(192,57,43,.55)':'rgba(26,95,160,.55)',borderColor:color,borderWidth:1.5,borderRadius:3},
+        ]},
+      options:{...baseOpt,plugins:{...baseOpt.plugins,legend:{display:true,labels:{color:'#7a746c',font:{size:11},boxWidth:12}}},
+        scales:{x:{grid:{display:false},ticks:{color:'#9a9590',font:{family:"'Noto Sans KR'",size:10},maxRotation:35}},
+                y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10},callback:v=>v+'건'}}}}});
+  }
+  function buildSmallTable(tblId, data, color){
+    const t=document.getElementById(tblId);
+    t.innerHTML=`<thead><tr><th>대학명</th><th>지원</th><th>합격</th><th>합격률</th></tr></thead>
+    <tbody>${(data||[]).map(d=>`<tr>
+      <td style="font-weight:600">${d.u}</td>
+      <td class="mn">${d.n}건</td>
+      <td class="mn">${d.w}건</td>
+      <td>${barHtml(d.r,color)}</td>
+    </tr>`).join('')}</tbody>`;
+  }
+  aGChart=buildBarChart('aChartG',d.g,cG,aGChart);
+  aJChart=buildBarChart('aChartJ',d.j,cJ,aJChart);
+  buildSmallTable('aTableG',d.g,cG);
+  buildSmallTable('aTableJ',d.j,cJ);
+
+  // ④ 연도별 트렌드 (전 등급대 + 현재 선택 강조)
+  renderYearlyCharts(idx);
+  renderYearlyTable(b);
+}
+
+function renderYearlyCharts(highlightIdx){
+  const yrs=[2023,2024,2025];
+  const gData=yrs.map(yr=>({
+    label:yr+'년',
+    data:bands.map(b=>yearlyData[yr][b]?.g_r??null),
+    borderColor:yr===2023?'#e0b060':yr===2024?'#c0392b':'#6a2fcf',
+    backgroundColor:'transparent',
+    tension:.35,pointRadius:4,borderWidth:2,
+    pointBackgroundColor:bands.map((_,i)=>i===highlightIdx?'#000':'transparent'),
+    pointBorderColor:bands.map((_,i)=>i===highlightIdx?'#000':(yr===2023?'#e0b060':yr===2024?'#c0392b':'#6a2fcf')),
+    pointRadius:bands.map((_,i)=>i===highlightIdx?7:4),
+  }));
+  const jData=yrs.map(yr=>({
+    label:yr+'년',
+    data:bands.map(b=>yearlyData[yr][b]?.j_r??null),
+    borderColor:yr===2023?'#e0b060':yr===2024?'#1a5fa0':'#2d7d46',
+    backgroundColor:'transparent',
+    tension:.35,pointRadius:4,borderWidth:2,
+  }));
+  const scaleOpt={
+    x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:9},maxRotation:30}},
+    y:{min:0,max:100,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10},callback:v=>v+'%'}}
+  };
+  const legOpt={display:true,labels:{color:'#7a746c',font:{size:10},boxWidth:12}};
+  if(aYGChart) aYGChart.destroy();
+  if(aYJChart) aYJChart.destroy();
+  aYGChart=new Chart(document.getElementById('aYearlyG').getContext('2d'),{type:'line',data:{labels:bandLabels,datasets:gData},options:{...baseOpt,plugins:{...baseOpt.plugins,legend:legOpt},scales:scaleOpt}});
+  aYJChart=new Chart(document.getElementById('aYearlyJ').getContext('2d'),{type:'line',data:{labels:bandLabels,datasets:jData},options:{...baseOpt,plugins:{...baseOpt.plugins,legend:legOpt},scales:scaleOpt}});
+}
+
+function trendIcon(v2023,v2024,v2025){
+  if(v2023===null||v2025===null) return '<span class="trend-eq">—</span>';
+  const d=v2025-v2023;
+  if(d>5) return `<span class="trend-dn">▲ +${d.toFixed(1)}%p</span>`;
+  if(d<-5) return `<span class="trend-up">▼ ${d.toFixed(1)}%p</span>`;
+  return `<span class="trend-eq">→ ${d>0?'+':''}${d.toFixed(1)}%p</span>`;
+}
+function yrChip(v){
+  if(v===null||v===undefined) return '<span class="yr-chip na">—</span>';
+  const cls=v>=40?'hi':v>=20?'md':'lo';
+  return `<span class="yr-chip ${cls}">${v.toFixed(1)}%</span>`;
+}
+function renderYearlyTable(b){
+  const rows=[
+    {label:'교과 합격률',key:'g_r',key2:'g_n'},
+    {label:'종합 합격률',key:'j_r',key2:'j_n'},
+  ];
+  const tbl=document.getElementById('aYearlyTbl');
+  tbl.innerHTML=`<thead><tr><th>구분</th><th>2023</th><th>2024</th><th>2025</th><th>변화 추이</th></tr></thead>
+  <tbody>${rows.map(row=>{
+    const v23=yearlyData[2023][b]?.[row.key], v24=yearlyData[2024][b]?.[row.key], v25=yearlyData[2025][b]?.[row.key];
+    const n23=yearlyData[2023][b]?.[row.key2]||0, n24=yearlyData[2024][b]?.[row.key2]||0, n25=yearlyData[2025][b]?.[row.key2]||0;
+    return `<tr>
+      <td style="font-weight:600">${row.label}</td>
+      <td>${yrChip(v23)}<br><span style="font-size:10px;color:var(--mu)">(${n23}건)</span></td>
+      <td>${yrChip(v24)}<br><span style="font-size:10px;color:var(--mu)">(${n24}건)</span></td>
+      <td>${yrChip(v25)}<br><span style="font-size:10px;color:var(--mu)">(${n25}건)</span></td>
+      <td>${trendIcon(v23,v24,v25)}</td>
+    </tr>`;
+  }).join('')}</tbody>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB B 로직
+// ══════════════════════════════════════════════════════════
+let bRateChart=null, bRatioChart=null, bTrendChart=null;
+
+function renderB(idx){
+  const b=bands[idx], dl=bandLabels[idx];
+  const my=myData[b]||{g_n:0,g_w:0,j_n:0,j_w:0,g:[],j:[]};
+  const ot=otData[b]||{g_n:0,g_w:0,j_n:0,j_w:0,g:[],j:[]};
+
+  document.getElementById('bMyGn').textContent=my.g_n+'건';
+  document.getElementById('bMyGr').textContent=pctStr(my.g_w,my.g_n);
+  document.getElementById('bMyJn').textContent=my.j_n+'건';
+  document.getElementById('bMyJr').textContent=pctStr(my.j_w,my.j_n);
+  document.getElementById('bOtGn').textContent=ot.g_n+'건';
+  document.getElementById('bOtGr').textContent=pctStr(ot.g_w,ot.g_n);
+  document.getElementById('bOtJn').textContent=ot.j_n+'건';
+  document.getElementById('bOtJr').textContent=pctStr(ot.j_w,ot.j_n);
+  document.getElementById('bGtitle').textContent=`📕 교과 — 대학별 합격률 격차 (내신 ${dl})`;
+  document.getElementById('bJtitle').textContent=`📘 종합 — 대학별 합격률 격차 (내신 ${dl})`;
+
+  // ③ 합격률 격차 차트
+  const myGr=pct(my.g_w,my.g_n)||0, myJr=pct(my.j_w,my.j_n)||0;
+  const otGr=pct(ot.g_w,ot.g_n)||0, otJr=pct(ot.j_w,ot.j_n)||0;
+
+  if(bRateChart) bRateChart.destroy();
+  bRateChart=new Chart(document.getElementById('bRateChart').getContext('2d'),{
+    type:'bar',data:{labels:['교과 합격률','종합 합격률'],datasets:[
+      {label:'우리학교',data:[myGr,myJr],backgroundColor:[cGL,cJL],borderColor:[cG,cJ],borderWidth:2,borderRadius:6},
+      {label:'비교학교',data:[otGr,otJr],backgroundColor:[cKL,cKJL],borderColor:[cK,cKJ],borderWidth:2,borderRadius:6},
+    ]},options:{...baseOpt,plugins:{...baseOpt.plugins,legend:{display:true,labels:{color:'#7a746c',font:{size:12},boxWidth:14}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#555',font:{family:"'Noto Sans KR'",size:13}}},
+              y:{max:100,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10},callback:v=>v+'%'}}}}});
+
+  // 격차 요약
+  const gapG=(myGr-otGr).toFixed(1), gapJ=(myJr-otJr).toFixed(1);
+  document.getElementById('bGapSummary').innerHTML=`
+    <div class="kpi" style="border-left:3px solid ${parseFloat(gapG)>0?cG:cK}">
+      <div class="kl">교과 합격률 격차</div>
+      <div class="kv" style="font-size:22px;color:${parseFloat(gapG)>0?cG:cK}">${parseFloat(gapG)>0?'+':''}${gapG}%p</div>
+      <div class="kd">${parseFloat(gapG)>0?'우리학교 유리':'비교학교 유리'} (우리 ${myGr.toFixed(1)}% vs 비교 ${otGr.toFixed(1)}%)</div>
+    </div>
+    <div class="kpi" style="border-left:3px solid ${parseFloat(gapJ)>0?cJ:cKJ}">
+      <div class="kl">종합 합격률 격차</div>
+      <div class="kv" style="font-size:22px;color:${parseFloat(gapJ)>0?cJ:cKJ}">${parseFloat(gapJ)>0?'+':''}${gapJ}%p</div>
+      <div class="kd">${parseFloat(gapJ)>0?'우리학교 유리':'비교학교 유리'} (우리 ${myJr.toFixed(1)}% vs 비교 ${otJr.toFixed(1)}%)</div>
+    </div>`;
+
+  // 전형 선택 비율
+  const myTot=my.g_n+my.j_n, otTot=ot.g_n+ot.j_n;
+  const myGp=myTot>0?+(my.g_n/myTot*100).toFixed(1):0;
+  const otGp=otTot>0?+(ot.g_n/otTot*100).toFixed(1):0;
+  if(bRatioChart) bRatioChart.destroy();
+  bRatioChart=new Chart(document.getElementById('bRatioChart').getContext('2d'),{
+    type:'bar',data:{labels:['우리학교','비교학교'],datasets:[
+      {label:'교과 비율',data:[myGp,otGp],backgroundColor:[cGL,cKL],borderColor:[cG,cK],borderWidth:1.5,borderRadius:4},
+      {label:'종합 비율',data:[+(100-myGp).toFixed(1),+(100-otGp).toFixed(1)],backgroundColor:[cJL,cKJL],borderColor:[cJ,cKJ],borderWidth:1.5,borderRadius:4},
+    ]},options:{...baseOpt,plugins:{...baseOpt.plugins,legend:{display:true,labels:{color:'#7a746c',font:{size:11},boxWidth:12}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#555',font:{family:"'Noto Sans KR'",size:12}}},
+              y:{max:100,ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10},callback:v=>v+'%'}}}}});
+
+  // 전 등급대 트렌드 (교과만, 비교용)
+  if(bTrendChart) bTrendChart.destroy();
+  bTrendChart=new Chart(document.getElementById('bTrendChart').getContext('2d'),{
+    type:'line',data:{labels:bandLabels,datasets:[
+      {label:'우리 교과',data:bands.map(b=>{const d=myData[b];return d?pct(d.g_w,d.g_n):null;}),borderColor:cG,backgroundColor:cGL,tension:.35,pointRadius:4,borderWidth:2},
+      {label:'우리 종합',data:bands.map(b=>{const d=myData[b];return d?pct(d.j_w,d.j_n):null;}),borderColor:cJ,backgroundColor:cJL,tension:.35,pointRadius:3,borderWidth:1.5,borderDash:[4,3]},
+      {label:'비교 교과',data:bands.map(b=>{const d=otData[b];return d?pct(d.g_w,d.g_n):null;}),borderColor:cK,backgroundColor:cKL,tension:.35,pointRadius:4,borderWidth:2},
+      {label:'비교 종합',data:bands.map(b=>{const d=otData[b];return d?pct(d.j_w,d.j_n):null;}),borderColor:cKJ,backgroundColor:cKJL,tension:.35,pointRadius:3,borderWidth:1.5,borderDash:[4,3]},
+    ]},options:{...baseOpt,plugins:{...baseOpt.plugins,legend:{display:true,labels:{color:'#7a746c',font:{size:10},boxWidth:12}}},
+      scales:{x:{ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:9},maxRotation:30}},
+              y:{min:0,max:100,ticks:{color:'#9a9590',font:{family:"'IBM Plex Mono'",size:10},callback:v=>v+'%'}}}}});
+
+  // 대학별 비교 테이블
+  function buildCompTbl(tblId, myU, otU, myC, otC){
+    const allU=new Set([...myU.map(d=>d.u),...otU.map(d=>d.u)]);
+    const rows=[...allU].map(u=>({u,my:myU.find(d=>d.u===u),ot:otU.find(d=>d.u===u)}))
+      .sort((a,b)=>{const bA=a.my&&a.ot?1:0,bB=b.my&&b.ot?1:0;if(bB!==bA)return bB-bA;return((b.my?.n||0)+(b.ot?.n||0))-((a.my?.n||0)+(a.ot?.n||0));}).slice(0,16);
+    document.getElementById(tblId).innerHTML=`<thead><tr>
+      <th>대학명</th>
+      <th style="color:${myC}">우리 지원</th><th style="color:${myC}">우리 합격률</th>
+      <th style="color:${otC}">비교 지원</th><th style="color:${otC}">비교 합격률</th>
+      <th>격차</th>
+    </tr></thead><tbody>
+    ${rows.map(({u,my,ot})=>{
+      const both=my&&ot;
+      const myR=my?.r??null, otR=ot?.r??null;
+      let gapCell='<span style="color:#ccc">—</span>';
+      if(myR!==null&&otR!==null){
+        const g=(myR-otR).toFixed(1);
+        const gc=parseFloat(g)>0?myC:otC;
+        gapCell=`<span style="color:${gc};font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700">${parseFloat(g)>0?'+':''}${g}%p</span>`;
+      }
+      return `<tr style="${both?'background:rgba(255,250,220,.5)':''}">
+        <td style="font-weight:600;font-size:12px">${u}</td>
+        <td class="mn" style="color:${myC}">${my?my.n+'건':'—'}</td>
+        <td>${my?barHtml(my.r,myC):'<span style="color:#ccc">—</span>'}</td>
+        <td class="mn" style="color:${otC}">${ot?ot.n+'건':'—'}</td>
+        <td>${ot?barHtml(ot.r,otC):'<span style="color:#ccc">—</span>'}</td>
+        <td>${gapCell}</td>
+      </tr>`;
+    }).join('')}</tbody>`;
+  }
+  buildCompTbl('bTableG',my.g,ot.g,cG,cK);
+  buildCompTbl('bTableJ',my.j,ot.j,cJ,cKJ);
+}
+
+// ══════════════════════════════════════════════════════════
+// 탭 전환
+// ══════════════════════════════════════════════════════════
+let bInitialized=false;
+function go(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  btn.classList.add('on');
+  if(id==='pB'&&!bInitialized){
+    bInitialized=true;
+    renderB(0);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════════════════════════
+buildBandBtns('aBandBtns', i=>renderA(i));
+buildBandBtns('bBandBtns', i=>renderB(i));
+renderA(0);
+</script>
+</body>
+</html>
