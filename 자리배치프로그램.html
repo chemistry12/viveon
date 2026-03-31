@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자리바꾸기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f2f5;
+  --white: #ffffff;
+  --border: #d1d5db;
+  --border2: #e5e7eb;
+  --text: #111827;
+  --text2: #6b7280;
+  --text3: #9ca3af;
+  --accent: #2563eb;
+  --accent-light: #eff6ff;
+  --accent-hover: #1d4ed8;
+  --green: #16a34a;
+  --green-light: #f0fdf4;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --yellow: #d97706;
+  --yellow-light: #fffbeb;
+  --desk-empty: #f9fafb;
+  --desk-filled: #ffffff;
+  --desk-fixed: #fef3c7;
+  --desk-fixed-border: #f59e0b;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-size: 14px; min-height: 100vh; }
+
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: 300px; min-width: 300px; background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-md); z-index: 10; }
+.sidebar-header { padding: 16px 18px 0; border-bottom: 1px solid var(--border2); }
+.sidebar-header h1 { font-size: 18px; font-weight: 900; color: var(--accent); letter-spacing: -0.5px; margin-bottom: 10px; }
+.tab-row { display: flex; gap: 2px; }
+.tab-btn { flex: 1; padding: 8px 4px; border: none; background: transparent; font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; border-radius: 6px 6px 0 0; transition: all 0.15s; border-bottom: 2px solid transparent; }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--accent-light); }
+.tab-btn:hover:not(.active) { background: var(--bg); color: var(--text); }
+.sidebar-body { flex: 1; overflow-y: auto; }
+.panel { display: none; flex-direction: column; }
+.panel.active { display: flex; }
+.section { padding: 14px 16px; border-bottom: 1px solid var(--border2); }
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+/* Form */
+.inp { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; background: var(--white); color: var(--text); outline: none; transition: border-color 0.15s; }
+.inp:focus { border-color: var(--accent); }
+.inp::placeholder { color: var(--text3); }
+.row { display: flex; gap: 6px; align-items: center; }
+.textarea { width: 100%; padding: 9px 10px; min-height: 90px; border: 1px solid var(--border); border-radius: 7px; font-family: 'Noto Sans KR', sans-serif; font-size: 12px; resize: vertical; outline: none; color: var(--text); line-height: 1.6; }
+.textarea:focus { border-color: var(--accent); }
+.hint { font-size: 11px; color: var(--text3); margin-top: 4px; line-height: 1.5; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 12px; border-radius: 7px; border: none; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-outline { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { background: var(--bg); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: #15803d; }
+.btn-red { background: var(--white); color: var(--red); border: 1px solid #fca5a5; }
+.btn-red:hover { background: var(--red-light); }
+.btn-yellow { background: var(--yellow-light); color: var(--yellow); border: 1px solid #fde68a; }
+.btn-yellow:hover { background: #fef9c3; }
+.btn-sm { padding: 6px 10px; font-size: 12px; }
+.btn-full { width: 100%; }
+
+/* Student list */
+.student-list { display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow-y: auto; }
+.student-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border2); background: var(--white); cursor: grab; transition: all 0.12s; font-size: 13px; }
+.student-item:hover { border-color: var(--accent); background: var(--accent-light); }
+.student-item.assigned { opacity: 0.38; cursor: default; pointer-events: none; }
+.student-item.drag-src { opacity: 0.25; }
+.s-num { font-size: 11px; font-weight: 700; color: var(--text3); min-width: 22px; }
+.s-name { flex: 1; font-weight: 500; }
+.s-fixed-tag { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: var(--yellow-light); color: var(--yellow); font-weight: 700; }
+.s-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; }
+.s-del:hover { color: var(--red); }
+
+/* Badge */
+.badge { font-size: 10px; padding: 1px 6px; border-radius: 10px; background: var(--bg); color: var(--text2); font-weight: 700; }
+
+/* Condition */
+.cond-item { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border2); background: var(--white); font-size: 12px; margin-bottom: 3px; }
+.cond-badge { padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.badge-together { background: var(--green-light); color: var(--green); }
+.badge-apart { background: var(--red-light); color: var(--red); }
+
+/* Config */
+.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.config-item label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 4px; font-weight: 600; }
+.config-item input, .config-item select { width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; background: var(--white); color: var(--text); outline: none; }
+.config-item input:focus, .config-item select:focus { border-color: var(--accent); }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { background: var(--white); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); z-index: 5; flex-wrap: wrap; }
+.topbar-stat { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; background: var(--bg); font-size: 12px; color: var(--text2); }
+.topbar-stat strong { color: var(--text); font-weight: 700; }
+.topbar-div { width: 1px; height: 20px; background: var(--border2); }
+
+/* Classroom */
+.classroom-wrap { flex: 1; overflow: auto; padding: 16px 20px; display: flex; flex-direction: column; align-items: center; }
+
+.room-outer {
+  display: flex; flex-direction: row; align-items: stretch;
+  background: #f8f9fa; border: 3px solid #adb5bd;
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  min-width: fit-content;
+}
+
+/* 왼쪽 벽 (뒷문 위, 앞문 아래) */
+.room-left-wall {
+  width: 56px; flex-shrink: 0;
+  background: #e9ecef; border-right: 3px solid #adb5bd;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+.door-block {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.door-shape {
+  width: 34px; height: 44px;
+  background: #fff; border: 2px solid #868e96; border-radius: 4px 4px 0 0;
+  position: relative; overflow: hidden;
+}
+.door-shape::before {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 0; border-left: 34px solid transparent;
+  border-bottom: 34px solid rgba(134,142,150,0.12);
+}
+.door-shape::after {
+  content: ''; position: absolute; top: 50%; right: 6px;
+  transform: translateY(-50%);
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #adb5bd; border: 1px solid #868e96;
+}
+.door-label {
+  font-size: 10px; font-weight: 800; color: #495057;
+  letter-spacing: 0.5px;
+}
+.left-wall-mid { flex: 1; }
+
+/* 중앙 컬럼: 위=사물함 바, 중=그리드+오른쪽, 아래=칠판 바 */
+.room-center { display: flex; flex-direction: column; flex: 1; }
+
+/* 사물함 바 */
+.locker-bar {
+  background: #dee2e6; border-bottom: 3px solid #adb5bd;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.locker-bar-text {
+  font-size: 15px; font-weight: 900; color: #495057;
+  letter-spacing: 8px; text-align: center;
+}
+
+/* 그리드 + 오른쪽 벽(창문+공기청정기) */
+.room-mid { display: flex; flex: 1; align-items: stretch; }
+
+.room-inner { padding: 14px 12px; background: #f8f9fa; flex: 1; }
+.classroom-grid { display: inline-grid; gap: 8px; }
+
+/* 오른쪽 벽 */
+.room-right-wall {
+  width: 56px; flex-shrink: 0;
+  background: #e9ecef; border-left: 3px solid #adb5bd;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0; gap: 0;
+}
+.air-purifier-block {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding-bottom: 10px; border-bottom: 2px dashed #ced4da; width: 100%;
+  align-items: center;
+}
+.air-purifier-body {
+  width: 34px; border-radius: 8px;
+  background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 1.5px solid #90caf9;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 5px 3px; gap: 3px;
+}
+.ap-vent { width: 22px; height: 3px; border-radius: 2px; background: #64b5f6; }
+.ap-fan { font-size: 14px; line-height: 1; }
+.ap-light { width: 6px; height: 6px; border-radius: 50%; background: #42a5f5; }
+.air-purifier-label { font-size: 9px; color: #868e96; font-weight: 700; text-align: center; margin-top: 3px; }
+
+/* 창문 (세로 바 하나) */
+.windows-area {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 6px 0;
+}
+.window-bar {
+  flex: 1; width: 36px;
+  background: #dbeafe;
+  border: 2px solid #93c5fd;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 4px 0;
+}
+.window-bar-text {
+  writing-mode: vertical-rl;
+  font-size: 13px; font-weight: 900; color: #3b82f6;
+  letter-spacing: 6px;
+}
+
+/* 칠판 바 */
+.blackboard-bar {
+  background: #1e3a1e; border-top: 3px solid #2d5a2d;
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 3px 10px rgba(0,0,0,0.3);
+}
+.blackboard-bar-text {
+  font-size: 15px; font-weight: 900; color: #86efac;
+  letter-spacing: 8px;
+}
+
+/* Desk */
+.desk { width: 88px; height: 76px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.12s; user-select: none; border: 2px solid var(--border); background: var(--desk-empty); box-shadow: var(--shadow); }
+.desk:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.desk.filled { background: var(--desk-filled); border-color: #93c5fd; cursor: grab; }
+.desk.filled:hover { border-color: var(--accent); }
+.desk.fixed-desk { background: var(--desk-fixed) !important; border-color: var(--desk-fixed-border) !important; }
+.desk.drag-over { border-color: var(--green) !important; background: var(--green-light) !important; transform: scale(1.06); }
+.desk.warn { border-color: var(--yellow) !important; background: var(--yellow-light) !important; }
+.d-seat { font-size: 9px; color: var(--text3); position: absolute; top: 4px; left: 6px; font-weight: 600; }
+.d-fix { font-size: 10px; position: absolute; top: 3px; right: 5px; }
+.d-name { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.2; text-align: center; padding: 0 4px; }
+.d-num { font-size: 11px; color: var(--text2); margin-top: 2px; font-weight: 500; }
+.d-empty-icon { font-size: 20px; color: var(--border); }
+.d-hist { position: absolute; bottom: 3px; right: 5px; font-size: 9px; color: var(--text3); }
+.desk.blocked { border: 2px dashed #d1d5db !important; cursor: pointer; }
+.desk.blocked:hover { opacity: 1 !important; }
+.desk.blocked-none { background: #f3f4f6 !important; opacity: 0.6; }
+.desk.blocked-none:hover { border-color: var(--red) !important; opacity:1; }
+.desk.blocked-move { background: #fef9c3 !important; border-color: #fbbf24 !important; opacity: 0.75; }
+.desk.blocked-move:hover { opacity: 1; border-color: #f59e0b !important; }
+.d-blocked { font-size: 16px; color: #d1d5db; }
+.d-blocked-label { font-size: 10px; color: #9ca3af; margin-top: 2px; font-weight: 700; }
+.d-move-label { font-size: 10px; color: #d97706; margin-top: 2px; font-weight: 700; }
+.d-move-icon { font-size: 16px; }
+.bottombar { background: var(--white); border-top: 1px solid var(--border); padding: 7px 20px; display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--text3); flex-wrap: wrap; }
+
+/* Modal */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.18s; }
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--white); border-radius: 14px; padding: 24px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); transform: scale(0.96) translateY(8px); transition: transform 0.18s; }
+.modal-bg.open .modal { transform: scale(1) translateY(0); }
+.modal h3 { font-size: 16px; font-weight: 800; margin-bottom: 14px; }
+.modal-body { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.info-card { background: var(--bg); border-radius: 10px; padding: 16px; text-align: center; }
+.info-card .big { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+.info-card .sub { font-size: 12px; color: var(--text2); }
+.info-card .hist { margin-top: 8px; font-size: 11px; color: var(--text3); }
+
+/* Toast */
+#toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: #fff; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 500; z-index: 200; transform: translateY(6px); opacity: 0; transition: all 0.2s; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* Print */
+@media print {
+  .sidebar, .topbar, .bottombar { display: none !important; }
+  .app { display: block; }
+  .main { overflow: visible; height: auto; }
+  .classroom-wrap { overflow: visible; padding: 10px; }
+  .room-outer { box-shadow: none; }
+  .blackboard, .desk.filled, .desk.fixed-desk { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>🪑 자리바꾸기</h1>
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab(0)">학생</button>
+      <button class="tab-btn" onclick="switchTab(1)">조건</button>
+      <button class="tab-btn" onclick="switchTab(2)">설정</button>
+      <button class="tab-btn" onclick="switchTab(3)">기록</button>
+    </div>
+  </div>
+  <div class="sidebar-body">
+
+    <!-- 학생 탭 -->
+    <div class="panel active" id="tab0">
+      <div class="section">
+        <div class="section-title">학생 추가</div>
+        <div class="row" style="margin-bottom:8px;">
+          <input class="inp" id="inp-name" placeholder="이름 입력 후 Enter" style="flex:1" onkeydown="if(event.key==='Enter')addStudent()">
+          <button class="btn btn-primary btn-sm" onclick="addStudent()">추가</button>
+        </div>
+        <textarea class="textarea" id="batch-text" placeholder="일괄입력 (한 줄에 한 명):&#10;홍길동&#10;김영희&#10;이철수"></textarea>
+        <div class="hint">줄 당 이름 하나씩 입력</div>
+        <button class="btn btn-outline btn-full btn-sm" style="margin-top:8px;" onclick="batchAdd()">일괄 추가</button>
+      </div>
+      <div class="section" style="flex:1;">
+        <div class="section-title">
+          학생 목록 <span id="s-count" class="badge">0명</span>
+          <button class="btn btn-red btn-sm" style="margin-left:auto;padding:3px 8px;font-size:11px;" onclick="deleteAllStudents()">전체 삭제</button>
+        </div>
+        <div class="student-list" id="student-list"></div>
+      </div>
+    </div>
+
+    <!-- 조건 탭 -->
+    <div class="panel" id="tab1">
+      <div class="section">
+        <div class="section-title">조건 추가</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="row">
+            <select class="inp" id="cond-s1" style="flex:1;"><option value="">학생 1 선택</option></select>
+            <select class="inp" id="cond-type" style="width:92px;">
+              <option value="together">🔗 붙이기</option>
+              <option value="apart">✂️ 떼놓기</option>
+            </select>
+          </div>
+          <select class="inp" id="cond-s2"><option value="">학생 2 선택</option></select>
+          <button class="btn btn-outline btn-full btn-sm" onclick="addCondition()">+ 조건 추가</button>
+        </div>
+      </div>
+      <div class="section" style="flex:1;">
+        <div class="section-title">적용 조건 <span id="cond-count" class="badge">0개</span></div>
+        <div id="cond-list"></div>
+        <div id="cond-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0;">설정된 조건 없음</div>
+      </div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div class="panel" id="tab2">
+
+      <!-- 설정 서브탭 -->
+      <div style="display:flex;border-bottom:1px solid var(--border2);">
+        <button class="tab-btn active" id="cfg-sub0" onclick="switchCfgTab(0)" style="font-size:11px;padding:8px 6px;">🏫 3-1반</button>
+        <button class="tab-btn" id="cfg-sub1" onclick="switchCfgTab(1)" style="font-size:11px;padding:8px 6px;">⚙️ 일반 설정</button>
+      </div>
+
+      <!-- 3-1반 서브패널 -->
+      <div id="cfg-panel0">
+        <div class="section">
+          <div class="section-title">3-1반 프리셋</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-outline btn-full btn-sm" onclick="applyPreset31()" style="border-color:var(--accent);color:var(--accent);font-weight:700;">🏫 3-1반 배치 적용</button>
+            <div class="hint">7열 6행 · 32자리 자동 구성</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">교실 구성</div>
+          <div class="config-grid">
+            <div class="config-item"><label>줄 수 (세로)</label><input type="number" id="cfg-rows" value="5" min="1" max="15" onchange="rebuildGrid()"></div>
+            <div class="config-item"><label>열 수 (가로)</label><input type="number" id="cfg-cols" value="6" min="1" max="15" onchange="rebuildGrid()"></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">자리 설정 초기화</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-outline btn-full btn-sm" onclick="resetSeatSettings()" style="border-color:#6b7280;color:#6b7280;">🔄 자리 설정 전체 초기화</button>
+            <div class="hint">배치안함 · 이동반 · 자리삭제를 모두 지우고 원래 빈 상태로 되돌립니다. (학생 배치는 유지)</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">자동 배치 방식</div>
+          <div class="config-item" style="margin-bottom:8px;">
+            <label>배치 방식</label>
+            <select id="cfg-method">
+              <option value="random">🎲 완전 랜덤</option>
+              <option value="number">🔢 번호 순서</option>
+              <option value="no-repeat">🔄 이전 자리 안 앉기</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label>자리 번호 표시</label>
+            <select id="cfg-shownum">
+              <option value="1">표시</option>
+              <option value="0">숨김</option>
+            </select>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">조작</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-primary btn-full" onclick="autoAssign()">🎲 자동 배치 실행</button>
+            <button class="btn btn-outline btn-full btn-sm" onclick="clearSeats()">🗑️ 배치만 초기화</button>
+            <button class="btn btn-red btn-full btn-sm" onclick="resetAll()">⚠️ 전체 초기화</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 일반 설정 서브패널 -->
+      <div id="cfg-panel1" style="display:none;">
+        <div class="section">
+          <div class="section-title">교실 구성</div>
+          <div class="config-grid">
+            <div class="config-item"><label>줄 수 (세로)</label><input type="number" id="cfg-rows" value="5" min="1" max="15" onchange="rebuildGrid()"></div>
+            <div class="config-item"><label>열 수 (가로)</label><input type="number" id="cfg-cols" value="6" min="1" max="15" onchange="rebuildGrid()"></div>
+          </div>
+          <div class="hint" style="margin-top:8px;">3-1반 프리셋과 무관하게 자유롭게 설정</div>
+        </div>
+        <div class="section">
+          <div class="section-title">자동 배치 방식</div>
+          <div class="config-item" style="margin-bottom:8px;">
+            <label>배치 방식</label>
+            <select id="cfg-method2">
+              <option value="random">🎲 완전 랜덤</option>
+              <option value="number">🔢 번호 순서</option>
+              <option value="no-repeat">🔄 이전 자리 안 앉기</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label>자리 번호 표시</label>
+            <select id="cfg-shownum2">
+              <option value="1">표시</option>
+              <option value="0">숨김</option>
+            </select>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">자리 설정 초기화</div>
+          <button class="btn btn-outline btn-full btn-sm" onclick="resetSeatSettings()" style="border-color:#6b7280;color:#6b7280;">🔄 자리 설정 전체 초기화</button>
+          <div class="hint" style="margin-top:6px;">배치안함·이동반·삭제 모두 제거</div>
+        </div>
+        <div class="section">
+          <div class="section-title">조작</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-primary btn-full" onclick="autoAssign()">🎲 자동 배치 실행</button>
+            <button class="btn btn-outline btn-full btn-sm" onclick="clearSeats()">🗑️ 배치만 초기화</button>
+            <button class="btn btn-red btn-full btn-sm" onclick="resetAll()">⚠️ 전체 초기화</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 기록 탭 -->
+    <div class="panel" id="tab3">
+      <div class="section">
+        <div class="section-title">자리 이력 관리</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px;">
+          자동 배치 시마다 각 학생의 자리가 기록됩니다.<br>
+          <b>이전 자리 안 앉기</b> 모드 선택 시 자동 적용됩니다.
+        </p>
+        <button class="btn btn-outline btn-full btn-sm" onclick="clearHistory()">🗂️ 기록 전체 삭제</button>
+      </div>
+      <div class="section">
+        <div class="section-title">저장 / 내보내기</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button class="btn btn-green btn-full btn-sm" onclick="saveData()">💾 저장 (브라우저)</button>
+          <button class="btn btn-outline btn-full btn-sm" onclick="loadData()">📂 불러오기</button>
+          <button class="btn btn-outline btn-full btn-sm" onclick="exportTxt()">📄 텍스트 내보내기</button>
+          <button class="btn btn-outline btn-full btn-sm" onclick="window.print()">🖨️ 인쇄</button>
+        </div>
+      </div>
+      <div class="section" style="flex:1;overflow-y:auto;">
+        <div class="section-title">이력 현황</div>
+        <div id="history-summary" style="font-size:12px;color:var(--text2);line-height:1.8;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-stat">총 자리 <strong id="tb-total">0</strong></div>
+    <div class="topbar-stat">배치됨 <strong id="tb-assigned" style="color:var(--accent)">0</strong></div>
+    <div class="topbar-stat">미배치 학생 <strong id="tb-remain" style="color:var(--red)">0</strong></div>
+    <div class="topbar-div"></div>
+    <button class="btn btn-primary btn-sm" onclick="autoAssign()">🎲 자동배치</button>
+    <button class="btn btn-outline btn-sm" onclick="clearSeats()">🗑️ 배치 초기화</button>
+    <button class="btn btn-outline btn-sm" onclick="checkConds()">✅ 조건 검증</button>
+    <div style="margin-left:auto;display:flex;gap:6px;">
+      <button class="btn btn-outline btn-sm" onclick="saveData()">💾 저장</button>
+      <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ 인쇄</button>
+    </div>
+  </div>
+
+  <div class="classroom-wrap">
+    <div class="room-outer">
+
+      <!-- 왼쪽 벽: 뒷문(위) + 앞문(아래) -->
+      <div class="room-left-wall">
+        <div class="door-block">
+          <div class="door-shape"></div>
+          <div class="door-label">뒷문</div>
+        </div>
+        <div class="left-wall-mid"></div>
+        <div class="door-block">
+          <div class="door-shape"></div>
+          <div class="door-label">앞문</div>
+        </div>
+      </div>
+
+      <!-- 중앙: 사물함 + 그리드 + 칠판 -->
+      <div class="room-center">
+
+        <!-- 사물함 바 -->
+        <div class="locker-bar">
+          <div class="locker-bar-text">🗄 사 물 함</div>
+        </div>
+
+        <!-- 그리드 + 오른쪽 벽 -->
+        <div class="room-mid">
+          <div class="room-inner">
+            <div class="classroom-grid" id="classroom-grid"></div>
+          </div>
+
+          <!-- 오른쪽 벽: 공기청정기(위) + 창문들 -->
+          <div class="room-right-wall">
+            <div class="air-purifier-block">
+              <div class="air-purifier-body">
+                <div class="ap-vent"></div>
+                <div class="ap-vent"></div>
+                <div class="ap-fan">🌀</div>
+                <div class="ap-vent"></div>
+                <div class="ap-vent"></div>
+                <div class="ap-light"></div>
+              </div>
+              <div class="air-purifier-label">공기<br>청정기</div>
+            </div>
+            <div class="windows-area" id="windows-area">
+              <!-- JS로 행 수에 맞게 동적 생성 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 칠판 바 -->
+        <div class="blackboard-bar">
+          <div class="blackboard-bar-text">◀ 칠 판 ▶</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="bottombar">
+    <span>📌 빈 자리 클릭 → 학생 배치 / 배치 안함 설정</span>
+    <span>🔄 책상 간 드래그 → 자리 교환</span>
+    <span>📌 배치된 학생 클릭 → 고정 설정</span>
+    <span style="margin-left:auto;">🚫 배치 안함 자리는 자동배치 제외</span>
+  </div>
+</div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// STATE
+let students = [];
+let conditions = [];
+let grid = [];
+let history = {};
+let blockedSeats = new Map(); // idx -> '배치안함' | '이동반'
+let deletedSeats = new Set(); // idx -> 자리 완전 삭제
+let presetState = null; // 프리셋 초기 상태 저장용
+let rows = 5, cols = 6;
+let dragSrc = null;
+let modalCtx = null;
+
+// INIT
+window.addEventListener('DOMContentLoaded', () => {
+  loadData(true);
+  rebuildGrid();
+  renderAll();
+});
+
+// TABS
+function switchTab(i) {
+  document.querySelectorAll('.tab-btn').forEach((b,j) => b.classList.toggle('active', i===j));
+  document.querySelectorAll('.panel').forEach((p,j) => p.classList.toggle('active', i===j));
+  if (i===3) renderHistorySummary();
+}
+
+function switchCfgTab(i){
+  document.getElementById('cfg-sub0').classList.toggle('active',i===0);
+  document.getElementById('cfg-sub1').classList.toggle('active',i===1);
+  document.getElementById('cfg-panel0').style.display=i===0?'':'none';
+  document.getElementById('cfg-panel1').style.display=i===1?'':'none';
+  if(i===1){
+    document.getElementById('cfg-method2').value=document.getElementById('cfg-method').value;
+    document.getElementById('cfg-shownum2').value=document.getElementById('cfg-shownum').value;
+  }
+}
+
+function resetSeatSettings(){
+  if(!confirm('배치안함·이동반·자리삭제 설정을 모두 초기화합니다.\n학생 배치는 그대로 유지됩니다. 계속할까요?')) return;
+  blockedSeats=new Map();
+  deletedSeats=new Set();
+  renderAll();
+  toast('자리 설정 초기화 완료');
+}
+
+// STUDENTS
+function addStudent() {
+  const v = document.getElementById('inp-name').value.trim();
+  if (!v) return;
+  pushStudent(v);
+  document.getElementById('inp-name').value = '';
+  renderAll(); toast(`${v} 추가됨`);
+}
+function batchAdd() {
+  const lines = document.getElementById('batch-text').value.trim().split('\n');
+  let n = 0;
+  lines.forEach(l => { const name = l.trim(); if (name) { pushStudent(name); n++; } });
+  document.getElementById('batch-text').value = '';
+  if (n > 0) { renderAll(); toast(`${n}명 추가됨`); }
+}
+function pushStudent(name) {
+  const id = 'S' + Date.now() + Math.random().toString(36).slice(2,5);
+  students.push({ id, num: students.length+1, name, fixed: false });
+}
+function deleteStudent(id) {
+  for (let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(grid[r]?.[c]===id) grid[r][c]=null;
+  conditions = conditions.filter(x => x.s1!==id && x.s2!==id);
+  delete history[id];
+  students = students.filter(s => s.id!==id);
+  students.forEach((s,i) => s.num=i+1);
+  renderAll();
+}
+function toggleFixed(id) {
+  const s = students.find(x => x.id===id);
+  if (s) { s.fixed=!s.fixed; renderAll(); toast(s.fixed?`${s.name} 고정됨`:`${s.name} 고정 해제`); }
+}
+function byId(id) { return students.find(s => s.id===id); }
+function assignedSet() {
+  const set = new Set();
+  for (let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(grid[r]?.[c]) set.add(grid[r][c]);
+  return set;
+}
+
+// CONDITIONS
+function addCondition() {
+  const s1=document.getElementById('cond-s1').value, s2=document.getElementById('cond-s2').value;
+  const type=document.getElementById('cond-type').value;
+  if (!s1||!s2||s1===s2) { toast('학생 두 명을 선택하세요'); return; }
+  if (conditions.find(c=>(c.s1===s1&&c.s2===s2)||(c.s1===s2&&c.s2===s1))) { toast('이미 있는 조건'); return; }
+  conditions.push({id:'C'+Date.now(), s1, s2, type});
+  renderAll(); toast('조건 추가됨');
+}
+function delCond(id) { conditions=conditions.filter(c=>c.id!==id); renderAll(); }
+
+// GRID
+function rebuildGrid() {
+  rows=parseInt(document.getElementById('cfg-rows').value)||5;
+  cols=parseInt(document.getElementById('cfg-cols').value)||6;
+  const prev=[];
+  for(let r=0;r<rows;r++){prev[r]=[];for(let c=0;c<cols;c++)prev[r][c]=grid[r]?.[c]||null;}
+  grid=prev; renderGrid(); updateStats();
+}
+
+// AUTO ASSIGN
+function getCfgMethod(){ return document.getElementById('cfg-method').value; }
+function getCfgShownum(){ return document.getElementById('cfg-shownum').value; }
+function autoAssign() {
+  const method=getCfgMethod();
+  const fixedPos=new Set();
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const sid=grid[r]?.[c]; if(sid&&byId(sid)?.fixed) fixedPos.add(r*cols+c);
+  }
+  // clear non-fixed
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(!fixedPos.has(r*cols+c)) grid[r][c]=null;
+
+  let pool=students.filter(s=>!s.fixed);
+  const avail=[];
+  // 칠판(아래)에서 가까운 자리부터 채우기 위해 역순으로 수집
+  for(let r=rows-1;r>=0;r--) for(let c=0;c<cols;c++){
+    const idx=r*cols+c;
+    if(!fixedPos.has(idx) && !blockedSeats.has(idx) && !deletedSeats.has(idx)) avail.push({r,c,idx});
+  }
+  if(pool.length>avail.length) pool=pool.slice(0,avail.length);
+
+  if (method==='number') {
+    pool.sort((a,b)=>a.num-b.num);
+    pool.forEach((s,i)=>{if(avail[i]) grid[avail[i].r][avail[i].c]=s.id;});
+  } else if (method==='no-repeat') {
+    let best=null, bestScore=-1;
+    for(let t=0;t<600;t++){
+      const p=shuffle([...pool]);
+      const score=p.reduce((acc,s,i)=>{
+        if(!avail[i]) return acc;
+        const prev=history[s.id]||[];
+        return acc+(prev.includes(avail[i].idx)?0:1);
+      },0);
+      if(score>bestScore){bestScore=score;best=p;}
+      if(score===pool.length) break;
+    }
+    (best||pool).forEach((s,i)=>{if(avail[i]) grid[avail[i].r][avail[i].c]=s.id;});
+  } else {
+    let best=null, bestScore=-1;
+    for(let t=0;t<500;t++){
+      const p=shuffle([...pool]);
+      const pos={};
+      p.forEach((s,i)=>{if(avail[i]) pos[s.id]=avail[i];});
+      const score=conditions.reduce((acc,c)=>{
+        const p1=pos[c.s1],p2=pos[c.s2]; if(!p1||!p2) return acc;
+        const d=Math.abs(p1.r-p2.r)+Math.abs(p1.c-p2.c);
+        return acc+((c.type==='together'&&d<=1)||(c.type==='apart'&&d>2)?1:0);
+      },0);
+      if(score>bestScore){bestScore=score;best=p;}
+      if(score>=conditions.length) break;
+    }
+    (best||pool).forEach((s,i)=>{if(avail[i]) grid[avail[i].r][avail[i].c]=s.id;});
+  }
+
+  // Record history
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const sid=grid[r][c]; if(sid){if(!history[sid]) history[sid]=[];history[sid].push(r*cols+c);}
+  }
+  renderAll(); toast('자동 배치 완료!');
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function clearSeats(){for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) grid[r][c]=null; renderAll(); toast('배치 초기화됨');}
+function resetAll(){if(!confirm('학생, 조건, 기록을 모두 초기화할까요?')) return; students=[];conditions=[];history={};blockedSeats=new Map();deletedSeats=new Set();clearSeats();toast('전체 초기화됨');}
+function deleteAllStudents(){
+  if(!students.length){toast('학생이 없습니다');return;}
+  if(!confirm(`학생 ${students.length}명을 모두 삭제할까요?`)) return;
+  students=[];conditions=[];history={};
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) grid[r][c]=null;
+  renderAll(); toast('학생 목록 전체 삭제됨');
+}
+function clearHistory(){history={};renderAll();toast('기록 삭제됨');}
+
+// CHECK CONDITIONS
+function checkConds() {
+  document.querySelectorAll('.desk').forEach(d=>d.classList.remove('warn'));
+  if(!conditions.length){toast('설정된 조건이 없습니다');return;}
+  const pos={};
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(grid[r]?.[c]) pos[grid[r][c]]={r,c};
+  let pass=0,fail=0;
+  const g=document.getElementById('classroom-grid');
+  conditions.forEach(cond=>{
+    const p1=pos[cond.s1],p2=pos[cond.s2]; if(!p1||!p2) return;
+    const d=Math.abs(p1.r-p2.r)+Math.abs(p1.c-p2.c);
+    const ok=cond.type==='together'?d<=1:d>2;
+    if(ok) pass++;
+    else{fail++;g.children[p1.r*cols+p1.c]?.classList.add('warn');g.children[p2.r*cols+p2.c]?.classList.add('warn');}
+  });
+  toast(`조건 ${pass}/${conditions.length} 통과${fail>0?' — 노란 테두리: 위반':' ✅'}`);
+}
+
+// RENDER
+function renderAll(){renderStudentList();renderCondList();renderGrid();updateStats();updateCondSelects();}
+
+function renderStudentList() {
+  const assigned=assignedSet();
+  document.getElementById('s-count').textContent=students.length+'명';
+  document.getElementById('student-list').innerHTML=students.map(s=>`
+    <div class="student-item ${assigned.has(s.id)?'assigned':''}"
+         draggable="${!assigned.has(s.id)}"
+         id="si-${s.id}"
+         ondragstart="listDragStart(event,'${s.id}')"
+         ondragend="listDragEnd()">
+      <span class="s-num">${String(s.num).padStart(2,'0')}</span>
+      <span class="s-name">${s.name}</span>
+      ${s.fixed?'<span class="s-fixed-tag">📌고정</span>':''}
+      <button class="s-del" onclick="deleteStudent('${s.id}')">×</button>
+    </div>`).join('');
+}
+
+function renderCondList() {
+  document.getElementById('cond-count').textContent=conditions.length+'개';
+  document.getElementById('cond-list').innerHTML=conditions.map(c=>{
+    const s1=byId(c.s1),s2=byId(c.s2); if(!s1||!s2) return '';
+    return `<div class="cond-item">
+      <span class="cond-badge ${c.type==='together'?'badge-together':'badge-apart'}">${c.type==='together'?'붙이기':'떼놓기'}</span>
+      <span>${s1.name}</span><span style="color:var(--text3)">↔</span><span>${s2.name}</span>
+      <button class="s-del" style="margin-left:auto;" onclick="delCond('${c.id}')">×</button>
+    </div>`;
+  }).join('');
+  document.getElementById('cond-empty').style.display=conditions.length?'none':'block';
+}
+
+function renderGrid() {
+  const showNum=getCfgShownum()==='1';
+  const g=document.getElementById('classroom-grid');
+  g.style.gridTemplateColumns=`repeat(${cols}, 90px)`;
+  g.innerHTML='';
+
+  // 창문: 세로 바 하나
+  const wa = document.getElementById('windows-area');
+  if (wa) {
+    wa.innerHTML = `<div class="window-bar"><div class="window-bar-text">창 문</div></div>`;
+  }
+  // 자리 번호 매핑: 오른쪽 아래(칠판 앞 창문쪽)부터 1번
+  // 오른쪽 열 아래→위, 다음 열로 이동(우→좌)
+  const seatNumMap = {}; // [r][c] -> 자리번호
+  let seatNum = 1;
+  for (let c = cols-1; c >= 0; c--) {
+    for (let r = rows-1; r >= 0; r--) {
+      seatNumMap[`${r},${c}`] = seatNum++;
+    }
+  }
+
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const rawIdx=r*cols+c;
+      const sid=grid[r]?.[c], seatIdx=seatNumMap[`${r},${c}`], el=document.createElement('div');
+      const isDeleted=deletedSeats.has(rawIdx);
+      const isBlocked=blockedSeats.has(rawIdx);
+      const blockType=blockedSeats.get(rawIdx);
+
+      if(isDeleted){
+        el.style.cssText='width:88px;height:76px;background:transparent;border:none;box-shadow:none;pointer-events:none;';
+      } else if(isBlocked && !sid){
+        el.className='desk';
+        if(blockType==='이동반'){
+          el.style.cssText='background:#fffbeb;border:2px solid #f59e0b;box-shadow:none;cursor:pointer;border-radius:8px;';
+          el.innerHTML=`${showNum?`<span class="d-seat" style="color:#d97706;">${seatIdx}</span>`:''}
+            <span style="font-size:11px;font-weight:900;color:#d97706;letter-spacing:1px;">이동반</span>`;
+        } else {
+          el.style.cssText='background:#f9fafb;border:2px dashed #e5e7eb;box-shadow:none;cursor:pointer;border-radius:8px;';
+          el.innerHTML=`${showNum?`<span class="d-seat" style="color:#d1d5db;">${seatIdx}</span>`:''}
+            <span style="font-size:11px;font-weight:700;color:#d1d5db;letter-spacing:1px;">배치안함</span>`;
+        }
+        el.addEventListener('click', ()=>openDeskModal(r,c));
+      } else if(sid){
+        const s=byId(sid);
+        el.className='desk filled'+(s?.fixed?' fixed-desk':'');
+        el.draggable=true;
+        el.innerHTML=`
+          ${showNum?`<span class="d-seat">${seatIdx}</span>`:''}
+          ${s?.fixed?'<span class="d-fix">📌</span>':''}
+          <span class="d-name">${s?.name||'?'}</span>
+          <span class="d-num">${String(s?.num||'').padStart(2,'0')}번</span>`;
+        el.addEventListener('dragstart', e=>deskDragStart(e,r,c,sid));
+        el.addEventListener('dragend', deskDragEnd);
+        el.addEventListener('click', ()=>openDeskModal(r,c));
+      } else {
+        el.className='desk';
+        el.innerHTML=`${showNum?`<span class="d-seat">${seatIdx}</span>`:''}<span class="d-empty-icon">＋</span>`;
+        el.addEventListener('click', ()=>openDeskModal(r,c));
+      }
+      if(!isDeleted && (!isBlocked || sid)){
+        el.addEventListener('dragover', e=>{e.preventDefault();el.classList.add('drag-over');});
+        el.addEventListener('dragleave', ()=>el.classList.remove('drag-over'));
+        el.addEventListener('drop', e=>onDrop(e,r,c,el));
+      }
+      g.appendChild(el);
+    }
+  }
+  updateStats();
+}
+
+function updateStats() {
+  const usable=rows*cols-blockedSeats.size-deletedSeats.size; let assigned=0;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(grid[r]?.[c]) assigned++;
+  const unassignedStudents=students.length-assigned;
+  document.getElementById('tb-total').textContent=usable+' (배치불가 '+(blockedSeats.size+deletedSeats.size)+')';
+  document.getElementById('tb-assigned').textContent=assigned;
+  document.getElementById('tb-remain').textContent=Math.max(0,unassignedStudents);
+}
+
+function updateCondSelects() {
+  const opts='<option value="">선택</option>'+students.map(s=>`<option value="${s.id}">${s.num}번 ${s.name}</option>`).join('');
+  document.getElementById('cond-s1').innerHTML=opts;
+  document.getElementById('cond-s2').innerHTML=opts;
+}
+
+function renderHistorySummary() {
+  const el=document.getElementById('history-summary');
+  if(!students.length){el.textContent='학생 없음';return;}
+  el.innerHTML=students.map(s=>{
+    const h=history[s.id]||[];
+    return `<div style="padding:3px 0;border-bottom:1px solid var(--border2);">${s.num}번 <b>${s.name}</b>: ${h.length}회 배치${h.length?` (자리번호: ${[...new Set(h)].map(i=>i+1).join(', ')})`:''}</div>`;
+  }).join('');
+}
+
+// DRAG & DROP
+function listDragStart(e,sid){dragSrc={type:'list',sid};e.dataTransfer.effectAllowed='move';setTimeout(()=>document.getElementById('si-'+sid)?.classList.add('drag-src'),0);}
+function listDragEnd(){document.querySelectorAll('.drag-src').forEach(el=>el.classList.remove('drag-src'));}
+function deskDragStart(e,r,c,sid){dragSrc={type:'desk',r,c,sid};e.dataTransfer.effectAllowed='move';}
+function deskDragEnd(){dragSrc=null;}
+function onDrop(e,r,c,el){
+  e.preventDefault();el.classList.remove('drag-over');
+  if(!dragSrc) return;
+  const targetSid=grid[r]?.[c];
+  if(dragSrc.type==='list'){if(targetSid) return; grid[r][c]=dragSrc.sid;}
+  else{grid[r][c]=dragSrc.sid;if(grid[dragSrc.r]) grid[dragSrc.r][dragSrc.c]=targetSid||null;}
+  dragSrc=null; renderGrid(); renderStudentList();
+}
+
+// MODAL
+function getSeatNum(r,c){
+  // 오른쪽 아래부터 1번 (열 우→좌, 행 아래→위)
+  return (cols-1-c)*rows + (rows-1-r) + 1;
+}
+function openDeskModal(r,c){
+  modalCtx={r,c};
+  const rawIdx=r*cols+c;
+  const sid=grid[r]?.[c], seatNum=getSeatNum(r,c), seatIdx=rawIdx;
+  const title=document.getElementById('modal-title');
+  const body=document.getElementById('modal-body');
+  const actions=document.getElementById('modal-actions');
+  const isBlocked=blockedSeats.has(rawIdx);
+  const blockType=blockedSeats.get(rawIdx);
+
+  if(isBlocked && !sid){
+    const isMov=blockType==='이동반';
+    title.textContent=`${seatNum}번 자리 — ${blockType}`;
+    body.innerHTML=`<div class="info-card">
+      <div class="big">${isMov?'🚶':'🚫'}</div>
+      <div class="sub">${isMov?'이동반 자리':'배치 안함 자리'}</div>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;">상태 변경 (클릭 시 즉시 적용)</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button class="btn btn-outline btn-full btn-sm" style="border-color:#d1d5db;color:#6b7280;" onclick="blockSeat(${rawIdx},'배치안함')">🚫 배치 안함으로 변경</button>
+        <button class="btn btn-outline btn-full btn-sm" style="border-color:#fbbf24;color:#d97706;" onclick="blockSeat(${rawIdx},'이동반')">🚶 이동반으로 변경</button>
+        <button class="btn btn-outline btn-full btn-sm" style="border-color:#ef4444;color:#dc2626;" onclick="deleteSeat(${rawIdx})">🗑️ 자리 삭제 (완전히 없애기)</button>
+        <button class="btn btn-primary btn-full btn-sm" onclick="unblockSeat(${rawIdx})">✅ 일반 자리로 되돌리기</button>
+      </div>
+    </div>`;
+    actions.innerHTML=`<button class="btn btn-outline btn-sm" onclick="closeModal()">닫기</button>`;
+  } else if(sid){
+    const s=byId(sid), h=history[sid]||[];
+    title.textContent='자리 정보';
+    body.innerHTML=`<div class="info-card">
+      <div class="big">${s.name}</div>
+      <div class="sub">${s.num}번 · ${seatNum}번 자리 ${s.fixed?'· 📌 고정중':''}</div>
+      ${h.length>1?`<div class="hist">이전 자리 이력: ${[...new Set(h.slice(0,-1))].map(i=>i+1).join(', ')}번</div>`:''}
+    </div>`;
+    actions.innerHTML=`
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">닫기</button>
+      <button class="btn btn-yellow btn-sm" onclick="toggleFixedModal('${sid}')">${s.fixed?'고정 해제':'📌 자리 고정'}</button>
+      <button class="btn btn-red btn-sm" onclick="removeModal()">제거</button>`;
+  } else {
+    const unassigned=students.filter(s=>!assignedSet().has(s.id));
+    title.textContent=`${seatNum}번 자리`;
+    body.innerHTML=`<div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600;">학생 배치</div>
+        <select class="inp" id="modal-sel">
+          <option value="">-- 선택 --</option>
+          ${unassigned.map(s=>`<option value="${s.id}">${s.num}번 ${s.name}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;">자리 상태 설정 (클릭 시 즉시 적용)</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button class="btn btn-outline btn-full btn-sm" style="border-color:#d1d5db;color:#6b7280;" onclick="blockSeat(${rawIdx},'배치안함')">🚫 배치 안함</button>
+          <button class="btn btn-outline btn-full btn-sm" style="border-color:#fbbf24;color:#d97706;" onclick="blockSeat(${rawIdx},'이동반')">🚶 이동반</button>
+          <button class="btn btn-outline btn-full btn-sm" style="border-color:#ef4444;color:#dc2626;" onclick="deleteSeat(${rawIdx})">🗑️ 자리 삭제</button>
+        </div>
+      </div>
+    </div>`;
+    actions.innerHTML=`
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">닫기</button>
+      <button class="btn btn-primary btn-sm" onclick="assignModal()">배치</button>`;
+  }
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal') closeModal();});
+function removeModal(){if(!modalCtx) return; grid[modalCtx.r][modalCtx.c]=null; closeModal();renderAll();}
+function toggleFixedModal(sid){toggleFixed(sid);closeModal();}
+function assignModal(){const sel=document.getElementById('modal-sel');if(!sel?.value) return;grid[modalCtx.r][modalCtx.c]=sel.value;closeModal();renderAll();}
+function blockSeat(idx,type='배치안함'){blockedSeats.set(idx,type);deletedSeats.delete(idx);closeModal();renderAll();toast(`${type}으로 설정됨`);}
+function unblockSeat(idx){blockedSeats.delete(idx);closeModal();renderAll();toast('일반 자리로 변경됨');}
+function deleteSeat(idx){
+  deletedSeats.add(idx);blockedSeats.delete(idx);
+  // 해당 자리에 학생 있으면 제거
+  const r=Math.floor(idx/cols), c=idx%cols;
+  if(grid[r]?.[c]) grid[r][c]=null;
+  closeModal();renderAll();toast('자리 삭제됨 (초기화로 복구 가능)');
+}
+function resetToPreset(){
+  if(!presetState) { toast('프리셋 상태가 없습니다. 3-1반 배치를 먼저 적용하세요.'); return; }
+  if(!confirm('프리셋 초기 상태로 되돌립니다. 배치안함/이동반/자리삭제 설정이 초기화됩니다. 계속할까요?')) return;
+  blockedSeats = new Map(presetState.blockedSeats);
+  deletedSeats = new Set(presetState.deletedSeats);
+  renderAll(); toast('프리셋 초기 상태로 복구됨');
+}
+
+// 3-1반 프리셋
+function applyPreset31(){
+  if(!confirm('3-1반 배치를 적용합니다.\n7열 6행으로 설정하고 책상 없는 자리를 자동 지정합니다.\n현재 배치와 저장 데이터가 초기화됩니다. 계속할까요?')) return;
+  // 기존 저장 데이터 완전 삭제
+  localStorage.removeItem('seating_v2');
+
+  rows=6; cols=7;
+  document.getElementById('cfg-rows').value=6;
+  document.getElementById('cfg-cols').value=7;
+  grid=[];
+  for(let r=0;r<rows;r++){grid[r]=[];for(let c=0;c<cols;c++)grid[r][c]=null;}
+  blockedSeats=new Map();
+
+  // c=2 위 5칸(r=0~4) → 빈 공간 (통로), 맨 아래(r=5)만 책상 있음
+  for(let r=0;r<5;r++) blockedSeats.set(r*cols+2,'배치안함');
+  // c=4 위 5칸(r=0~4) → 빈 공간, 맨 아래(r=5)만 책상 있음
+  for(let r=0;r<5;r++) blockedSeats.set(r*cols+4,'배치안함');
+
+  switchTab(2);
+  renderAll();
+  // 프리셋 초기 상태 기억
+  presetState = { blockedSeats: [...blockedSeats], deletedSeats: [...deletedSeats] };
+  // 프리셋 상태를 즉시 저장
+  localStorage.setItem('seating_v2',JSON.stringify({students,conditions,grid,history,rows,cols,blockedSeats:[...blockedSeats],deletedSeats:[...deletedSeats]}));
+  toast('3-1반 배치 적용 완료! (32자리) — 저장됨');
+}
+
+// SAVE / LOAD
+function saveData(){
+  localStorage.setItem('seating_v2',JSON.stringify({students,conditions,grid,history,rows,cols,blockedSeats:[...blockedSeats],deletedSeats:[...deletedSeats],presetState}));
+  toast('저장 완료!');
+}
+function loadData(silent=false){
+  const raw=localStorage.getItem('seating_v2');
+  if(!raw){if(!silent) toast('저장된 데이터 없음');return;}
+  try{
+    const d=JSON.parse(raw);
+    students=d.students||[];conditions=d.conditions||[];grid=d.grid||[];history=d.history||{};
+    blockedSeats=new Map(d.blockedSeats||[]);
+    deletedSeats=new Set(d.deletedSeats||[]);
+    presetState=d.presetState||null;
+    rows=d.rows||5;cols=d.cols||6;
+    document.getElementById('cfg-rows').value=rows;
+    document.getElementById('cfg-cols').value=cols;
+    if(!silent){renderAll();toast('불러오기 완료!');}
+  }catch(e){if(!silent) toast('데이터 오류');}
+}
+function exportTxt(){
+  let txt='=== 자리 배치표 ===\n\n[ 칠판 ]\n\n';
+  for(let r=0;r<rows;r++){
+    const row=[];
+    for(let c=0;c<cols;c++){const sid=grid[r]?.[c];const s=sid?byId(sid):null;row.push(s?`${String(s.num).padStart(2,'0')}${s.name}`:'　　　');}
+    txt+=row.join(' | ')+'\n';
+  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));
+  a.download='자리배치표.txt';a.click();toast('내보내기 완료!');
+}
+
+// TOAST
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2400);}
+</script>
+</body>
+</html>
