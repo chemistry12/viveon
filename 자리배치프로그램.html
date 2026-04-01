@@ -461,11 +461,24 @@ body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', s
         <button class="btn btn-outline btn-full btn-sm" onclick="clearHistory()">🗂️ 기록 전체 삭제</button>
       </div>
       <div class="section">
-        <div class="section-title">저장 / 내보내기</div>
+        <div class="section-title">저장 / 불러오기</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
-          <button class="btn btn-green btn-full btn-sm" onclick="saveData()">💾 저장 (브라우저)</button>
-          <button class="btn btn-outline btn-full btn-sm" onclick="loadData()">📂 불러오기</button>
-          <button class="btn btn-outline btn-full btn-sm" onclick="exportTxt()">📄 텍스트 내보내기</button>
+          <button class="btn btn-green btn-full btn-sm" onclick="saveData()">💾 브라우저에 저장</button>
+          <button class="btn btn-outline btn-full btn-sm" onclick="loadData()">📂 브라우저에서 불러오기</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">파일로 내보내기 / 가져오기</div>
+        <p style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:8px;">
+          💡 파일로 저장하면 <b>다른 컴퓨터</b>에서도 불러올 수 있어요.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button class="btn btn-primary btn-full btn-sm" onclick="exportFile()">⬇️ 파일로 내보내기 (.json)</button>
+          <label class="btn btn-outline btn-full btn-sm" style="cursor:pointer;text-align:center;">
+            ⬆️ 파일에서 가져오기
+            <input type="file" accept=".json" onchange="importFile(event)" style="display:none;">
+          </label>
+          <button class="btn btn-outline btn-full btn-sm" onclick="exportTxt()">📄 텍스트 내보내기 (.txt)</button>
           <button class="btn btn-outline btn-full btn-sm" onclick="window.print()">🖨️ 인쇄</button>
         </div>
       </div>
@@ -490,6 +503,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', s
     <button class="btn btn-outline btn-sm" onclick="checkConds()">✅ 조건 검증</button>
     <div style="margin-left:auto;display:flex;gap:6px;">
       <button class="btn btn-outline btn-sm" onclick="saveData()">💾 저장</button>
+      <button class="btn btn-primary btn-sm" onclick="exportFile()">⬇️ 파일 저장</button>
       <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ 인쇄</button>
     </div>
   </div>
@@ -1028,10 +1042,10 @@ function applyPreset31(){
   toast('3-1반 배치 적용 완료! (32자리) — 저장됨');
 }
 
-// SAVE / LOAD
+// SAVE / LOAD (브라우저)
 function saveData(){
   localStorage.setItem('seating_v2',JSON.stringify({students,conditions,grid,history,rows,cols,blockedSeats:[...blockedSeats],deletedSeats:[...deletedSeats],presetState}));
-  toast('저장 완료!');
+  toast('브라우저에 저장 완료!');
 }
 function loadData(silent=false){
   const raw=localStorage.getItem('seating_v2');
@@ -1047,6 +1061,46 @@ function loadData(silent=false){
     document.getElementById('cfg-cols').value=cols;
     if(!silent){renderAll();toast('불러오기 완료!');}
   }catch(e){if(!silent) toast('데이터 오류');}
+}
+
+// FILE EXPORT / IMPORT
+function exportFile(){
+  const data={students,conditions,grid,history,rows,cols,
+    blockedSeats:[...blockedSeats],deletedSeats:[...deletedSeats],presetState,
+    _version:2, _exported: new Date().toLocaleString('ko-KR')};
+  const json=JSON.stringify(data,null,2);
+  const now=new Date();
+  const dateStr=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json;charset=utf-8'}));
+  a.download=`자리배치_${dateStr}.json`;
+  a.click();
+  toast('파일로 저장됐어요! (.json)');
+}
+function importFile(e){
+  const file=e.target.files[0];
+  if(!file){return;}
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!d.students && !d.grid){toast('올바른 파일이 아닙니다');return;}
+      if(!confirm(`파일을 불러오면 현재 데이터가 교체됩니다.\n내보낸 날짜: ${d._exported||'알 수 없음'}\n계속할까요?`)){e.target.value='';return;}
+      students=d.students||[];conditions=d.conditions||[];grid=d.grid||[];history=d.history||{};
+      blockedSeats=new Map(d.blockedSeats||[]);
+      deletedSeats=new Set(d.deletedSeats||[]);
+      presetState=d.presetState||null;
+      rows=d.rows||5;cols=d.cols||6;
+      document.getElementById('cfg-rows').value=rows;
+      document.getElementById('cfg-cols').value=cols;
+      // 브라우저에도 자동 저장
+      localStorage.setItem('seating_v2',JSON.stringify({students,conditions,grid,history,rows,cols,blockedSeats:[...blockedSeats],deletedSeats:[...deletedSeats],presetState}));
+      renderAll();
+      toast('파일 불러오기 완료! 브라우저에도 저장됐어요.');
+    }catch(err){toast('파일 읽기 오류: 올바른 JSON 파일인지 확인하세요');}
+    e.target.value='';
+  };
+  reader.readAsText(file,'utf-8');
 }
 function exportTxt(){
   let txt='=== 자리 배치표 ===\n\n[ 칠판 ]\n\n';
